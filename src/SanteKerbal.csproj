@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>SanteKerbal</AssemblyName>
+    <RootNamespace>SanteKerbal</RootNamespace>
+    <LangVersion>8.0</LangVersion>
+    <Version>0.1.0</Version>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+    <!-- Dossier d'installation de KSP (surchargeable : dotnet build -p:KSPDir=...) -->
+    <KSPDir Condition="'$(KSPDir)' == ''">C:\Program Files\GOG Galaxy\Games\Kerbal Space Program</KSPDir>
+    <KSPManaged>$(KSPDir)\KSP_x64_Data\Managed</KSPManaged>
+    <!-- Dossier GameData du dépôt, copié tel quel dans le jeu -->
+    <ModGameData>$(MSBuildThisFileDirectory)..\GameData\SanteKerbal</ModGameData>
+  </PropertyGroup>
+
+  <!-- DLL du jeu : référencées mais jamais copiées dans la sortie -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp"><HintPath>$(KSPManaged)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(KSPManaged)\Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(KSPManaged)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(KSPManaged)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(KSPManaged)\UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(KSPManaged)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(KSPManaged)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <!-- Après le build : copie de la DLL dans le dépôt puis de tout le mod dans le jeu -->
+  <Target Name="DeployToKSP" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModGameData)\Plugins" />
+    <ItemGroup>
+      <ModFiles Include="$(ModGameData)\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ModFiles)" DestinationFiles="@(ModFiles->'$(KSPDir)\GameData\SanteKerbal\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Message Importance="high" Text="[SanteKerbal] Déployé dans $(KSPDir)\GameData\SanteKerbal" />
+  </Target>
+
+</Project>

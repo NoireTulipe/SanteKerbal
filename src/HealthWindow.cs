@@ -1,0 +1,208 @@
+using System.Collections.Generic;
+using KSP.UI.Screens;
+using UnityEngine;
+
+namespace SanteKerbal
+{
+    /// <summary>
+    /// Bouton de barre d'outils et fenêtre de santé pour le vaisseau actif.
+    /// </summary>
+    [KSPAddon(KSPAddon.Startup.Flight, false)]
+    public class HealthWindow : MonoBehaviour
+    {
+        private const string IconUrl = "SanteKerbal/Icons/toolbar";
+        private const int WindowId = 0x5A17E;
+
+        // Conservés d'une scène de vol à l'autre pendant la session
+        private static Rect windowRect = new Rect(200, 120, 340, 0);
+        private static bool visible;
+
+        private ApplicationLauncherButton button;
+        private bool uiHidden;
+
+        private GUIStyle barLabelStyle;
+        private GUIStyle richLabelStyle;
+
+        public void Start()
+        {
+            GameEvents.onGUIApplicationLauncherReady.Add(AddButton);
+            GameEvents.onGUIApplicationLauncherDestroyed.Add(RemoveButton);
+            GameEvents.onHideUI.Add(OnHideUI);
+            GameEvents.onShowUI.Add(OnShowUI);
+            if (ApplicationLauncher.Ready)
+                AddButton();
+        }
+
+        public void OnDestroy()
+        {
+            GameEvents.onGUIApplicationLauncherReady.Remove(AddButton);
+            GameEvents.onGUIApplicationLauncherDestroyed.Remove(RemoveButton);
+            GameEvents.onHideUI.Remove(OnHideUI);
+            GameEvents.onShowUI.Remove(OnShowUI);
+            RemoveButton();
+        }
+
+        private void OnHideUI() => uiHidden = true;
+        private void OnShowUI() => uiHidden = false;
+
+        private void AddButton()
+        {
+            if (button != null || ApplicationLauncher.Instance == null)
+                return;
+            Texture2D icon = GameDatabase.Instance.GetTexture(IconUrl, false);
+            if (icon == null)
+            {
+                Log.Warning("Icône " + IconUrl + " introuvable, bouton sans image.");
+                icon = Texture2D.whiteTexture;
+            }
+            button = ApplicationLauncher.Instance.AddModApplication(
+                () => visible = true, () => visible = false,
+                null, null, null, null,
+                ApplicationLauncher.AppScenes.FLIGHT | ApplicationLauncher.AppScenes.MAPVIEW,
+                icon);
+            if (visible)
+                button.SetTrue(false);
+            Log.Info("Bouton de barre d'outils ajouté");
+        }
+
+        private void RemoveButton()
+        {
+            if (button == null)
+                return;
+            if (ApplicationLauncher.Instance != null)
+                ApplicationLauncher.Instance.RemoveModApplication(button);
+            button = null;
+        }
+
+        public void OnGUI()
+        {
+            if (!visible || uiHidden || HealthScenario.Instance == null)
+                return;
+
+            GUI.skin = HighLogic.Skin;
+            if (barLabelStyle == null)
+            {
+                barLabelStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontStyle = FontStyle.Bold,
+                    normal = { textColor = Color.white }
+                };
+                richLabelStyle = new GUIStyle(GUI.skin.label) { richText = true };
+            }
+            windowRect = GUILayout.Window(WindowId, windowRect, DrawWindow, "SantéKerbal", GUILayout.Width(340));
+        }
+
+        private void DrawWindow(int id)
+        {
+            Vessel vessel = FlightGlobals.ActiveVessel;
+            if (vessel == null)
+            {
+                GUILayout.Label("Aucun vaisseau actif.");
+            }
+            else if (vessel.isEVA)
+            {
+                GUILayout.Label(vessel.vesselName);
+                GUILayout.Label("Kerbal en EVA : non suivi pour l'instant.");
+            }
+            else
+            {
+                DrawVessel(vessel);
+            }
+
+            if (GUILayout.Button("Fermer"))
+            {
+                visible = false;
+                if (button != null)
+                    button.SetFalse(false);
+            }
+            GUI.DragWindow();
+        }
+
+        private void DrawVessel(Vessel vessel)
+        {
+            GUILayout.Label("<b>" + vessel.vesselName + "</b>", richLabelStyle);
+
+            List<ProtoCrewMember> crew = vessel.GetVesselCrew();
+            int alive = 0;
+            if (crew.Count == 0)
+            {
+                GUILayout.Label("Pas d'équipage à bord.");
+            }
+            else
+            {
+                foreach (ProtoCrewMember pcm in crew)
+                {
+                    KerbalHealth k = HealthScenario.Instance.Get(pcm);
+                    if (!k.Dead)
+                        alive++;
+                    DrawKerbal(k, vessel);
+                }
+            }
+
+            GUILayout.Space(6);
+            LifeResources.GetTotals(vessel, LifeResources.Water, out double water, out double waterMax);
+            LifeResources.GetTotals(vessel, LifeResources.Food, out double food, out double foodMax);
+            SupplyPanel.Draw(water, waterMax, food, foodMax, alive, Equipment.FromParts(vessel.parts));
+        }
+
+        private void DrawKerbal(KerbalHealth k, Vessel vessel)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(k.Name, GUILayout.Width(150));
+
+            Rect bar = GUILayoutUtility.GetRect(150, 18, GUILayout.ExpandWidth(true));
+            DrawBar(bar, k.Dead ? 0f : (float)(k.Health / KerbalHealth.Max), HealthColor(k));
+            GUI.Label(bar, k.Dead ? "MORT" : k.Health.ToString("F0"), barLabelStyle);
+            GUILayout.EndHorizontal();
+
+            if (Settings.DebugTools && !k.Dead)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("   test :", GUILayout.Width(60));
+                if (GUILayout.Button("-20"))
+                    ChangeHealth(k, -20, vessel);
+                if (GUILayout.Button("+20"))
+                    ChangeHealth(k, +20, vessel);
+                if (GUILayout.Button("Tuer"))
+                    Mortality.Kill(k, "outil de test", vessel.vesselName);
+                GUILayout.EndHorizontal();
+            }
+
+            if (!k.Dead && (k.LackWater || k.LackFood))
+            {
+                string lack = k.LackWater && k.LackFood ? "soif et faim" : k.LackWater ? "soif" : "faim";
+                GUILayout.Label("<color=#ff8060>   ! " + lack + "</color>", richLabelStyle);
+            }
+        }
+
+        private static void ChangeHealth(KerbalHealth k, double delta, Vessel vessel)
+        {
+            if (delta < 0)
+                k.Damage(-delta);
+            else
+                k.Heal(delta);
+            Log.Info($"[{vessel.vesselName}] Test : santé de {k.Name} -> {k.Health:F0}");
+            if (k.Health <= 0)
+                Mortality.Kill(k, "outil de test", vessel.vesselName);
+        }
+
+        private static Color HealthColor(KerbalHealth k)
+        {
+            if (k.Dead) return Color.gray;
+            if (k.Health > 50) return new Color(0.2f, 0.8f, 0.2f);
+            if (k.Health > 25) return new Color(0.9f, 0.75f, 0.1f);
+            return new Color(0.9f, 0.2f, 0.15f);
+        }
+
+        private static void DrawBar(Rect rect, float fraction, Color color)
+        {
+            Color old = GUI.color;
+            GUI.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = color;
+            GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width * Mathf.Clamp01(fraction), rect.height), Texture2D.whiteTexture);
+            GUI.color = old;
+        }
+    }
+}

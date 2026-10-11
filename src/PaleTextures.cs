@@ -1,0 +1,106 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace SanteKerbal
+{
+    /// <summary>
+    /// Versions blafardes des textures de peau, générées à la demande et mises en cache.
+    /// Le shader des Kerbals multiplie la texture par une couleur, ce qui ne permet que d'assombrir :
+    /// pour éclaircir et désaturer, il faut une autre texture.
+    /// </summary>
+    internal static class PaleTextures
+    {
+        public const int AliveLevels = 4;          // niveaux 1..4 de pâleur (0 = texture d'origine)
+        public const int DeadLevel = AliveLevels + 1;
+
+        private static readonly Dictionary<int, Color32[]> sourcePixels = new Dictionary<int, Color32[]>();
+        private static readonly Dictionary<long, Texture2D> cache = new Dictionary<long, Texture2D>();
+        private static readonly HashSet<int> failed = new HashSet<int>();
+
+        /// <summary>Texture de niveau donné, ou null si la texture n'a pas pu être copiée.</summary>
+        public static Texture2D Get(Texture2D source, int level)
+        {
+            if (source == null || level <= 0)
+                return source;
+            int id = source.GetInstanceID();
+            if (failed.Contains(id))
+                return null;
+
+            long key = ((long)id << 8) | (uint)level;
+            if (cache.TryGetValue(key, out Texture2D tex) && tex != null)
+                return tex;
+
+            Color32[] src = GetSourcePixels(source);
+            if (src == null)
+            {
+                failed.Add(id);
+                return null;
+            }
+
+            var pixels = new Color32[src.Length];
+            bool dead = level == DeadLevel;
+            float t = dead ? 1f : Settings.MaxPaleness * level / AliveLevels;
+            Color pale = Settings.PaleColor;
+            Color deadTint = Settings.DeadColor;
+            for (int i = 0; i < src.Length; i++)
+            {
+                Color c = src[i];
+                float lum = 0.3f * c.r + 0.59f * c.g + 0.11f * c.b;
+                Color target = dead
+                    ? deadTint * (0.45f + 0.55f * lum)                    // gris-vert terne
+                    : Color.Lerp(new Color(lum, lum, lum), pale, 0.6f);   // désaturé et éclairci
+                Color r = Color.Lerp(c, target, t);
+                r.a = c.a;
+                pixels[i] = r;
+            }
+
+            tex = new Texture2D(source.width, source.height, TextureFormat.RGBA32, true)
+            {
+                name = source.name + "_SanteKerbal" + level,
+                wrapMode = source.wrapMode,
+                filterMode = source.filterMode,
+                anisoLevel = source.anisoLevel
+            };
+            tex.SetPixels32(pixels);
+            tex.Apply(true, true);
+            cache[key] = tex;
+            return tex;
+        }
+
+        /// <summary>Copie lisible des pixels (les textures du jeu ne le sont pas) via une RenderTexture.</summary>
+        private static Color32[] GetSourcePixels(Texture2D source)
+        {
+            int id = source.GetInstanceID();
+            if (sourcePixels.TryGetValue(id, out Color32[] px))
+                return px;
+
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture rt = null;
+            try
+            {
+                rt = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+                Graphics.Blit(source, rt);
+                RenderTexture.active = rt;
+                var copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+                copy.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+                copy.Apply();
+                px = copy.GetPixels32();
+                Object.Destroy(copy);
+                sourcePixels[id] = px;
+                Log.Info($"Texture '{source.name}' ({source.width}x{source.height}) copiée pour la pâleur");
+                return px;
+            }
+            catch (System.Exception e)
+            {
+                Log.Warning($"Impossible de copier la texture '{source.name}' : {e.Message}");
+                return null;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                if (rt != null)
+                    RenderTexture.ReleaseTemporary(rt);
+            }
+        }
+    }
+}

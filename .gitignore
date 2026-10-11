@@ -1,0 +1,9 @@
+# Sorties de compilation
+src/bin/
+src/obj/
+# DLL copiée par le build (régénérée à chaque compilation)
+GameData/SanteKerbal/Plugins/*.dll
+# Éditeurs
+.vs/
+.vscode/
+*.user
