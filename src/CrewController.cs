@@ -98,11 +98,11 @@ namespace SanteKerbal
                     continue;
 
                 bool show;
-                if (!Settings.DeathPortraitStatic)
+                if (Settings.DeathPortrait == DeathView.Body)
                 {
                     show = true;
                 }
-                else if (!Settings.SkullFlicker)
+                else if (Settings.DeathPortrait == DeathView.Static)
                 {
                     show = false;
                 }

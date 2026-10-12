@@ -2,6 +2,36 @@ using UnityEngine;
 
 namespace SanteKerbal
 {
+    /// <summary>Ce que montre le portrait d'un Kerbal mort.</summary>
+    public enum DeathView
+    {
+        Body,    // « Dépouille visible » : corps figé, crâne, tête tombée
+        Static,  // « Signal perdu » : portrait brouillé (comportement de KSP)
+        Ghost    // « Signal fantôme » : brouillé, la dépouille apparaît par instants
+    }
+
+    internal static class DeathViews
+    {
+        // Libellés du menu, dans l'ordre du curseur
+        public static readonly string[] Labels = { "Dépouille visible", "Signal perdu", "Signal fantôme" };
+        private static readonly string[] Keys = { "body", "static", "ghost" };
+
+        public static string Label(DeathView v) => Labels[(int)v];
+
+        /// <summary>Accepte un libellé du menu ou une clé du .cfg (body, static, ghost).</summary>
+        public static DeathView Parse(string s, DeathView fallback)
+        {
+            if (string.IsNullOrEmpty(s))
+                return fallback;
+            s = s.Trim();
+            for (int i = 0; i < Labels.Length; i++)
+                if (string.Equals(s, Labels[i], System.StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(s, Keys[i], System.StringComparison.OrdinalIgnoreCase))
+                    return (DeathView)i;
+            return fallback;
+        }
+    }
+
     /// <summary>
     /// Réglages lus dans GameData/SanteKerbal/SanteKerbal.cfg (nœud SANTEKERBAL_SETTINGS).
     /// Les valeurs ci-dessous sont les valeurs par défaut si le fichier ou une clé manque.
@@ -18,7 +48,6 @@ namespace SanteKerbal
         public static bool HeatEffects = true;
         public static bool KscRest = true;
         public static bool VisualDecline = true;
-        public static bool SkullFlicker = true;
 
         // Consommation, en unités par Kerbal et par jour de jeu
         public static double WaterPerDay = 3.0;
@@ -54,7 +83,7 @@ namespace SanteKerbal
         public static Color DeadColor = new Color(0.55f, 0.6f, 0.55f);
         public static string SkinTextureKeywords = "head,face"; // textures considérées comme la peau
         public static bool HideEyesWhenDead = true;     // masque les globes oculaires des morts
-        public static bool DeathPortraitStatic = true;  // true = portrait brouillé à la mort (comportement KSP)
+        public static DeathView DeathPortrait = DeathView.Body; // portrait d'un mort (voir DeathView)
 
         // Intervalle du log de diagnostic, en secondes réelles (0 = désactivé)
         public static float DebugLogInterval = 30f;
@@ -69,7 +98,8 @@ namespace SanteKerbal
         {
             public static double WaterPerDay = 3, FoodPerDay = 1, DaysWithoutWater = 3, DaysWithoutFood = 21, RegenPerDay = 5;
             public static double HighG = 6, LethalG = 20, HeatThreshold = 330;
-            public static bool DeathPortraitStatic = true, DebugTools = false;
+            public static DeathView DeathPortrait = DeathView.Body;
+            public static bool DebugTools = false;
         }
 
         public static void Load()
@@ -107,7 +137,9 @@ namespace SanteKerbal
             n.TryGetValue("maxPaleness", ref MaxPaleness);
             n.TryGetValue("deadColor", ref DeadColor);
             n.TryGetValue("skinTextureKeywords", ref SkinTextureKeywords);
-            n.TryGetValue("deathPortraitStatic", ref DeathPortraitStatic);
+            string deathView = null;
+            if (n.TryGetValue("deathView", ref deathView))
+                DeathPortrait = DeathViews.Parse(deathView, DeathPortrait);
             n.TryGetValue("hideEyesWhenDead", ref HideEyesWhenDead);
             n.TryGetValue("debugLogInterval", ref DebugLogInterval);
             n.TryGetValue("debugTools", ref DebugTools);
@@ -120,7 +152,7 @@ namespace SanteKerbal
             Defaults.HighG = HighG;
             Defaults.LethalG = LethalG;
             Defaults.HeatThreshold = HeatThreshold;
-            Defaults.DeathPortraitStatic = DeathPortraitStatic;
+            Defaults.DeathPortrait = DeathPortrait;
             Defaults.DebugTools = DebugTools;
 
             Loaded = true;
@@ -154,8 +186,7 @@ namespace SanteKerbal
             HeatThreshold = danger.heatThreshold;
 
             VisualDecline = display.visualDecline;
-            DeathPortraitStatic = display.deathPortraitStatic;
-            SkullFlicker = display.skullFlicker;
+            DeathPortrait = DeathViews.Parse(display.deathView, Defaults.DeathPortrait);
             DebugTools = display.debugTools;
 
             Log.Info("Réglages de la partie appliqués : " + Describe());
@@ -164,14 +195,14 @@ namespace SanteKerbal
         public static string Describe()
         {
             return $"actif={Enabled}, G={GEffects}, chaleur={HeatEffects}, repos KSC={KscRest}, " +
-                   $"dépérissement={VisualDecline}, crâne intermittent={SkullFlicker}, " +
+                   $"dépérissement={VisualDecline}, portrait d'un mort={DeathViews.Label(DeathPortrait)}, " +
                    $"eau={WaterPerDay}/j, nourriture={FoodPerDay}/j, survie sans eau={DaysWithoutWater} j, " +
                    $"sans nourriture={DaysWithoutFood} j, régén={RegenPerDay}/j, " +
                    $"G élevés={HighG} (après {HighGGraceSeconds} s, {HighGDamagePerSecond}/s), " +
                    $"G mortels={LethalG} pendant {LethalGSeconds} s, " +
                    $"chaleur>{HeatThreshold} K ({HeatDamagePerSecondPerKelvin}/s/K), " +
                    $"visuel sous {VisualStartHealth} (vitesse min {MinAnimationSpeed}, tête {MaxHeadTilt}°/{DeadHeadTilt}° " +
-                   $"axe {HeadTiltAxis}, os '{HeadBoneName}', pâleur {MaxPaleness}, portrait brouillé={DeathPortraitStatic}), " +
+                   $"axe {HeadTiltAxis}, os '{HeadBoneName}', pâleur {MaxPaleness}), " +
                    $"log diagnostic toutes les {DebugLogInterval} s, outils de test={DebugTools}";
         }
     }

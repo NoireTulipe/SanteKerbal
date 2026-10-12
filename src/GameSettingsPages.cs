@@ -151,11 +151,9 @@ namespace SanteKerbal
         [GameParameters.CustomParameterUI("Dépérissement visible", toolTip = "Les Kerbals affaiblis pâlissent, penchent la tête et ralentissent.")]
         public bool visualDecline = true;
 
-        [GameParameters.CustomParameterUI("Portrait brouillé à la mort", toolTip = "Désactivé : le portrait montre le corps.")]
-        public bool deathPortraitStatic = Settings.Defaults.DeathPortraitStatic;
-
-        [GameParameters.CustomParameterUI("Crâne intermittent", toolTip = "Dans le portrait brouillé, le visage du mort apparaît par instants.")]
-        public bool skullFlicker = true;
+        [GameParameters.CustomParameterUI("Portrait d'un mort",
+            toolTip = "Dépouille visible : on voit le corps.\nSignal perdu : portrait brouillé.\nSignal fantôme : brouillé, la dépouille apparaît par instants.")]
+        public string deathView = DeathViews.Label(Settings.Defaults.DeathPortrait);
 
         [GameParameters.CustomParameterUI("Outils de test", toolTip = "Boutons -20 / +20 / Tuer dans la fenêtre, export des textures.")]
         public bool debugTools = Settings.Defaults.DebugTools;
@@ -171,9 +169,14 @@ namespace SanteKerbal
         {
             if (!SKSection.ModEnabled(parameters))
                 return false;
-            if (member.Name == nameof(skullFlicker))
-                return deathPortraitStatic;
             return true;
+        }
+
+        public override System.Collections.IList ValidValues(MemberInfo member)
+        {
+            if (member.Name == nameof(deathView))
+                return new System.Collections.Generic.List<string>(DeathViews.Labels);
+            return null;
         }
     }
 }
