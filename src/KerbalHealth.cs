@@ -12,6 +12,7 @@ namespace SanteKerbal
         public bool Dead;
         public bool Asleep;        // en hibernation
         public double WakeUntil;   // UT de fin du réveil (0 = pas en train de se réveiller)
+        public uint ReturnPartId;  // pièce d'origine (persistentId) à regagner après le réveil, 0 = aucune
 
         public bool Waking => WakeUntil > 0;
         /// <summary>Ne peut ni piloter, ni sortir, ni être transféré.</summary>
@@ -47,6 +48,7 @@ namespace SanteKerbal
             node.AddValue("dead", Dead);
             node.AddValue("asleep", Asleep);
             node.AddValue("wakeUntil", WakeUntil.ToString("R"));
+            node.AddValue("returnPartId", ReturnPartId);
             node.AddValue("lackWater", LackWater);
             node.AddValue("lackFood", LackFood);
         }
@@ -61,6 +63,9 @@ namespace SanteKerbal
             node.TryGetValue("dead", ref k.Dead);
             node.TryGetValue("asleep", ref k.Asleep);
             node.TryGetValue("wakeUntil", ref k.WakeUntil);
+            string ret = node.GetValue("returnPartId");
+            if (ret != null)
+                uint.TryParse(ret, out k.ReturnPartId);
             node.TryGetValue("lackWater", ref k.LackWater);
             node.TryGetValue("lackFood", ref k.LackFood);
             return k;

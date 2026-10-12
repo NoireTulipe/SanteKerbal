@@ -89,14 +89,26 @@ namespace SanteKerbal
         {
             Part src = PartOf(vessel, pcm);
             Part dst = FreeCryoPart(vessel);
-            if (src == null || dst == null || CrewController.Instance == null)
+            if (src == null || dst == null)
                 return;
+            if (MoveCrew(pcm, src, dst, () => Sleep(k, pcm, vessel)))
+                k.ReturnPartId = src.persistentId;   // poste à regagner après le réveil
+        }
 
+        /// <summary>
+        /// Déplace un Kerbal d'une pièce à l'autre du même vaisseau, comme le transfert d'équipage de
+        /// KSP (CrewTransfer.MoveCrewTo) : l'intérieur est recréé à l'image suivante, puis then() est appelé.
+        /// </summary>
+        private static bool MoveCrew(ProtoCrewMember pcm, Part src, Part dst, System.Action then)
+        {
+            if (CrewController.Instance == null)
+                return false;
+            Vessel vessel = src.vessel;
             src.RemoveCrewmember(pcm);
             dst.AddCrewmember(pcm);
             GameEvents.onCrewTransferred.Fire(new GameEvents.HostedFromToAction<ProtoCrewMember, Part>(pcm, src, dst));
             Vessel.CrewWasModified(vessel);
-            Log.Info($"{k.Name} transféré dans {dst.partInfo.title} pour hiberner");
+            Log.Info($"{pcm.name} transféré de {src.partInfo.title} vers {dst.partInfo.title}");
 
             bool active = vessel == FlightGlobals.ActiveVessel;
             if (active)
@@ -105,8 +117,45 @@ namespace SanteKerbal
             {
                 if (active && vessel != null)
                     vessel.SpawnCrew();
-                Sleep(k, pcm, vessel);
+                then?.Invoke();
             });
+            return true;
+        }
+
+        /// <summary>
+        /// Après le réveil, renvoie le Kerbal à la pièce d'où il était venu. Renvoie false si le
+        /// vaisseau n'est pas chargé (on réessaiera plus tard) ; sinon le retour est fait ou abandonné.
+        /// </summary>
+        public static bool TryReturnToPost(KerbalHealth k, ProtoCrewMember pcm)
+        {
+            Vessel vessel = null;
+            Part src = null;
+            foreach (Vessel v in FlightGlobals.VesselsLoaded)
+            {
+                src = v.isEVA ? null : PartOf(v, pcm);
+                if (src != null) { vessel = v; break; }
+            }
+            if (vessel == null)
+                return false;   // pas chargé (ou en EVA) : plus tard
+
+            uint id = k.ReturnPartId;
+            k.ReturnPartId = 0;
+            Part dst = vessel.parts.Find(p => p.persistentId == id);
+            if (dst == null)
+            {
+                HealthEvents.Announce(vessel, $"{k.Name} ne retrouve pas son poste (pièce disparue) : il reste dans le caisson.");
+                return true;
+            }
+            if (dst == src)
+                return true;
+            if (dst.protoModuleCrew.Count >= dst.CrewCapacity)
+            {
+                HealthEvents.Announce(vessel, $"Le poste de {k.Name} ({dst.partInfo.title}) est occupé : il reste dans le caisson.");
+                return true;
+            }
+            string title = dst.partInfo.title;
+            MoveCrew(pcm, src, dst, () => HealthEvents.Announce(vessel, $"{k.Name} a regagné son poste ({title})."));
+            return true;
         }
 
         public static void Sleep(KerbalHealth k, ProtoCrewMember pcm, Vessel vessel)
@@ -195,7 +244,19 @@ namespace SanteKerbal
                 if (pcm != null && !k.Dead)
                     Mortality.Revive(pcm);
                 Log.Info($"{k.Name} est réveillé");
-                ScreenMessages.PostScreenMessage($"{k.Name} est réveillé et reprend son poste.", 5f, ScreenMessageStyle.UPPER_CENTER);
+                ScreenMessages.PostScreenMessage($"{k.Name} est réveillé.", 5f, ScreenMessageStyle.UPPER_CENTER);
+            }
+
+            // Retour au poste : dès que le Kerbal est opérationnel et son vaisseau chargé
+            foreach (KerbalHealth k in all)
+            {
+                if (k.ReturnPartId == 0 || k.Dead || k.Asleep || k.Waking)
+                    continue;
+                ProtoCrewMember pcm = HighLogic.CurrentGame?.CrewRoster?[k.Name];
+                if (pcm == null || pcm.rosterStatus != ProtoCrewMember.RosterStatus.Assigned)
+                    k.ReturnPartId = 0;   // récupéré, mort, disparu : plus de poste à regagner
+                else
+                    TryReturnToPost(k, pcm);
             }
         }
 
@@ -207,6 +268,7 @@ namespace SanteKerbal
             k.Asleep = false;
             k.WakeUntil = 0;
             k.LackWater = false;
+            k.ReturnPartId = 0;
             if (pcm != null)
                 Mortality.Revive(pcm);
         }
