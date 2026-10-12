@@ -43,6 +43,7 @@ namespace SanteKerbal
         public static float MaxPaleness = 0.7f;         // part de PaleColor dans le teint à santé nulle
         public static Color DeadColor = new Color(0.55f, 0.6f, 0.55f);
         public static string SkinTextureKeywords = "head,face"; // textures considérées comme la peau
+        public static bool HideEyesWhenDead = true;     // masque les globes oculaires des morts
         public static bool DeathPortraitStatic = true;  // true = portrait brouillé à la mort (comportement KSP)
 
         // Intervalle du log de diagnostic, en secondes réelles (0 = désactivé)
@@ -89,6 +90,7 @@ namespace SanteKerbal
             n.TryGetValue("deadColor", ref DeadColor);
             n.TryGetValue("skinTextureKeywords", ref SkinTextureKeywords);
             n.TryGetValue("deathPortraitStatic", ref DeathPortraitStatic);
+            n.TryGetValue("hideEyesWhenDead", ref HideEyesWhenDead);
             n.TryGetValue("debugLogInterval", ref DebugLogInterval);
             n.TryGetValue("debugTools", ref DebugTools);
 

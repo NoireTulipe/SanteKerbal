@@ -20,6 +20,11 @@ namespace SanteKerbal
         private readonly List<Texture2D> skinTextures = new List<Texture2D>();
         private int appliedLevel;
 
+        // Globes oculaires : objets séparés devant le visage, masqués chez les morts
+        // pour laisser voir les orbites de la texture « mort »
+        private readonly Renderer[] eyes;
+        private bool eyesHidden;
+
         // Rotation de tête : on retient ce qu'on a écrit pour ne pas cumuler l'inclinaison
         // si l'animation ne réécrit pas l'os à chaque image.
         private bool headWritten;
@@ -32,6 +37,9 @@ namespace SanteKerbal
             animators = kerbal.GetComponentsInChildren<Animator>(true);
             head = FindHead(kerbal);
             CollectSkin(kerbal);
+            eyes = kerbal.GetComponentsInChildren<Renderer>(true)
+                .Where(r => r.name.ToLowerInvariant().Contains("eye") || r.name.ToLowerInvariant().Contains("pupil"))
+                .ToArray();
             LogDiagnostics();
         }
 
@@ -55,6 +63,16 @@ namespace SanteKerbal
             int level = k.Dead ? PaleTextures.DeadLevel : Mathf.CeilToInt(amount * PaleTextures.AliveLevels);
             if (level != appliedLevel)
                 ApplySkinLevel(level);
+
+            // Yeux : masqués à la mort
+            bool hideEyes = k.Dead && Settings.HideEyesWhenDead;
+            if (hideEyes != eyesHidden)
+            {
+                foreach (Renderer r in eyes)
+                    if (r != null)
+                        r.enabled = !hideEyes;
+                eyesHidden = hideEyes;
+            }
 
             // Tête : penche progressivement, tombe à la mort
             if (head != null)
@@ -104,6 +122,8 @@ namespace SanteKerbal
             {
                 skinMaterials.Add(m);
                 skinTextures.Add((Texture2D)m.mainTexture);
+                if (Settings.DebugTools)
+                    PaleTextures.Export((Texture2D)m.mainTexture);
             }
         }
 
@@ -132,7 +152,8 @@ namespace SanteKerbal
             string headPath = head != null ? PathOf(head, Kerbal.transform) : "(aucun)";
             string textures = string.Join(", ", skinTextures.Where(t => t != null).Select(t => t.name).Distinct());
             Log.Info($"Modèle IVA de {name} : os penché='{headPath}', animators={animators.Length}, " +
-                     $"textures de peau={skinMaterials.Count} ({textures})");
+                     $"textures de peau={skinMaterials.Count} ({textures}), " +
+                     $"yeux={eyes.Length} ({string.Join(", ", eyes.Select(r => r.name))})");
         }
 
         private static string PathOf(Transform t, Transform root)

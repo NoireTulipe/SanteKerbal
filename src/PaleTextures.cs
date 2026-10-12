@@ -16,12 +16,25 @@ namespace SanteKerbal
         private static readonly Dictionary<int, Color32[]> sourcePixels = new Dictionary<int, Color32[]>();
         private static readonly Dictionary<long, Texture2D> cache = new Dictionary<long, Texture2D>();
         private static readonly HashSet<int> failed = new HashSet<int>();
+        private static readonly HashSet<string> exported = new HashSet<string>();
+
+        // Texture « mort » personnalisée : GameData/SanteKerbal/Textures/<nom>_mort.png
+        private const string CustomDeadUrl = "SanteKerbal/Textures/{0}_mort";
+        // Exports pour dessiner : dossier SanteKerbal_Export à la racine de KSP (hors GameData)
+        private const string ExportFolder = "SanteKerbal_Export";
 
         /// <summary>Texture de niveau donné, ou null si la texture n'a pas pu être copiée.</summary>
         public static Texture2D Get(Texture2D source, int level)
         {
             if (source == null || level <= 0)
                 return source;
+            if (level == DeadLevel)
+            {
+                Texture2D custom = GameDatabase.Instance.GetTexture(string.Format(CustomDeadUrl, source.name), false);
+                if (custom != null)
+                    return custom;
+            }
+
             int id = source.GetInstanceID();
             if (failed.Contains(id))
                 return null;
@@ -65,6 +78,35 @@ namespace SanteKerbal
             tex.Apply(true, true);
             cache[key] = tex;
             return tex;
+        }
+
+        /// <summary>
+        /// Enregistre la texture d'origine en PNG (une fois par session), pour servir de modèle
+        /// à une texture « mort » personnalisée.
+        /// </summary>
+        public static void Export(Texture2D source)
+        {
+            if (source == null || !exported.Add(source.name))
+                return;
+            Color32[] px = GetSourcePixels(source);
+            if (px == null)
+                return;
+            try
+            {
+                string dir = System.IO.Path.Combine(KSPUtil.ApplicationRootPath, ExportFolder);
+                System.IO.Directory.CreateDirectory(dir);
+                string path = System.IO.Path.Combine(dir, source.name + ".png");
+                var tex = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+                tex.SetPixels32(px);
+                tex.Apply();
+                System.IO.File.WriteAllBytes(path, tex.EncodeToPNG());
+                Object.Destroy(tex);
+                Log.Info("Texture exportée : " + System.IO.Path.GetFullPath(path));
+            }
+            catch (System.Exception e)
+            {
+                Log.Warning($"Export de la texture '{source.name}' impossible : {e.Message}");
+            }
         }
 
         /// <summary>Copie lisible des pixels (les textures du jeu ne le sont pas) via une RenderTexture.</summary>
