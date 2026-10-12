@@ -64,6 +64,40 @@ namespace SanteKerbal
             }
         }
 
+        /// <summary>Le vaisseau a-t-il au moins un caisson (plein ou non) ?</summary>
+        public static bool HasCryoPod(Vessel vessel)
+        {
+            foreach (Part p in vessel.parts)
+                if (p.FindModuleImplementing<ModuleSKCryoPod>() != null)
+                    return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Un mort assis dans un caisson le bloque : on peut déplacer son corps vers une place libre
+        /// hors caisson. Renvoie la pièce de destination possible, ou null.
+        /// </summary>
+        public static Part BodyDestination(Vessel vessel, ProtoCrewMember pcm)
+        {
+            if (vessel == null || !vessel.loaded || CryoPartOf(vessel, pcm) == null)
+                return null;
+            foreach (Part p in vessel.parts)
+                if (p.FindModuleImplementing<ModuleSKCryoPod>() == null && p.CrewCapacity > 0 && p.protoModuleCrew.Count < p.CrewCapacity)
+                    return p;
+            return null;
+        }
+
+        public static void MoveBody(KerbalHealth k, ProtoCrewMember pcm, Vessel vessel)
+        {
+            Part src = PartOf(vessel, pcm);
+            Part dst = BodyDestination(vessel, pcm);
+            if (src == null || dst == null || !k.Dead)
+                return;
+            k.ReturnPartId = 0;
+            string title = dst.partInfo.title;
+            MoveCrew(pcm, src, dst, () => HealthEvents.Announce(vessel, $"Le corps de {k.Name} a été déplacé ({title})."));
+        }
+
         /// <summary>Un caisson du vaisseau avec une place libre.</summary>
         public static Part FreeCryoPart(Vessel vessel)
         {

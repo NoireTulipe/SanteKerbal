@@ -20,7 +20,7 @@ namespace SanteKerbal
         private const float ImageW = 1024f, ImageH = 765f;
         private static readonly Rect ScreenInImage = new Rect(136f, 157f, 641f, 445f);
 
-        // Taille de base de la tablette à l'écran (avant échelle d'interface et zoom du joueur)
+        // Taille de référence de la tablette : toutes les dimensions de l'interface y sont exprimées
         private const float BaseWidth = 760f;
         private const float TopBarHeight = 26f;
 
@@ -28,15 +28,15 @@ namespace SanteKerbal
 
         private static readonly Page[] HomeIcons = { Page.Health, Page.Crew, Page.Stocks, Page.Greenhouse, Page.Recycler, Page.Power };
 
-        // Conservés pendant la session ; taille et position aussi entre les sessions (PluginData)
-        private static bool visible;
-        private static Vector2 position = new Vector2(-1f, -1f);   // -1 = centrée en bas au premier affichage
-        private static float zoom = 1.3f;
-        private static bool prefsLoaded;
-        private static Page page = Page.Home;
+        // Position fixe, choisie par NoireTulipe : collée au bord droit de l'écran, en haut,
+        // un peu plus haute que l'écran (738 px pour 720 px de haut). Proportionnelle à la hauteur de
+        // l'écran, pour garder la même disposition à toutes les résolutions.
+        private const float HeightToScreen = 738f / 720f;
+        private const float TopToScreen = 3f / 720f;
 
-        private static string PrefsPath =>
-            System.IO.Path.Combine(KSPUtil.ApplicationRootPath, "GameData/SanteKerbal/PluginData/tablette.cfg");
+        // Conservés pendant la session
+        private static bool visible;
+        private static Page page = Page.Home;
 
         private ApplicationLauncherButton button;
         private bool uiHidden;
@@ -59,46 +59,9 @@ namespace SanteKerbal
             if (ApplicationLauncher.Ready)
                 AddButton();
             LoadTextures();
-            LoadPrefs();
         }
 
-        /// <summary>Taille et position de la tablette, gardées d'une partie à l'autre.</summary>
-        private static void LoadPrefs()
-        {
-            if (prefsLoaded)
-                return;
-            prefsLoaded = true;
-            try
-            {
-                if (!System.IO.File.Exists(PrefsPath))
-                    return;
-                ConfigNode node = ConfigNode.Load(PrefsPath);
-                node?.TryGetValue("zoom", ref zoom);
-                node?.TryGetValue("x", ref position.x);
-                node?.TryGetValue("y", ref position.y);
-            }
-            catch (System.Exception e)
-            {
-                Log.Warning("Préférences de la tablette illisibles : " + e.Message);
-            }
-        }
 
-        private static void SavePrefs()
-        {
-            try
-            {
-                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PrefsPath));
-                var node = new ConfigNode("TABLETTE");
-                node.AddValue("zoom", zoom);
-                node.AddValue("x", position.x);
-                node.AddValue("y", position.y);
-                node.Save(PrefsPath);
-            }
-            catch (System.Exception e)
-            {
-                Log.Warning("Préférences de la tablette non enregistrées : " + e.Message);
-            }
-        }
 
         public void OnDestroy()
         {
@@ -109,7 +72,6 @@ namespace SanteKerbal
             RemoveButton();
             SetLock(false);
             MonitorSystem.BeepEnabled = false;
-            SavePrefs();
         }
 
         private void OnHideUI() => uiHidden = true;
@@ -176,7 +138,6 @@ namespace SanteKerbal
 
         private void Close()
         {
-            SavePrefs();
             visible = false;
             if (button != null)
                 button.SetFalse(false);
@@ -205,7 +166,8 @@ namespace SanteKerbal
 
         #region Dessin
 
-        private float Scale => GameSettings.UI_SCALE * zoom;
+        /// <summary>Échelle de la tablette : sa hauteur suit celle de l'écran.</summary>
+        private static float Scale => Screen.height * HeightToScreen / (BaseWidth * ImageH / ImageW);
 
         // Échelle de l'image en cours (tailles de base multipliées par s) et peau aux polices agrandies
         private float s = 1f;
@@ -228,15 +190,8 @@ namespace SanteKerbal
             GUI.skin = scaledSkin;
 
             float w = U(BaseWidth), h = U(BaseWidth * ImageH / ImageW);
-            if (position.x < 0 || position.y < 0)
-                position = new Vector2((Screen.width - w) / 2f, Screen.height - h - 10f);   // centrée en bas
-            // Toujours au moins en partie visible
-            position.x = Mathf.Clamp(position.x, 50f - w, Screen.width - 50f);
-            position.y = Mathf.Clamp(position.y, 0f, Screen.height - 50f);
-
-            var rect = new Rect(position.x, position.y, w, h);
-            rect = GUI.Window(WindowId, rect, DrawTablet, GUIContent.none, GUIStyle.none);
-            position = new Vector2(rect.x, rect.y);
+            var rect = new Rect(Screen.width - w, Mathf.Round(Screen.height * TopToScreen), w, h);
+            GUI.Window(WindowId, rect, DrawTablet, GUIContent.none, GUIStyle.none);
 
             SetLock(rect.Contains(Event.current.mousePosition));
         }
@@ -261,8 +216,6 @@ namespace SanteKerbal
             // Le pouce du Kerbal reste devant l'écran
             if (thumbTex != null)
                 GUI.DrawTexture(new Rect(0, 0, w, h), thumbTex);
-
-            GUI.DragWindow();
         }
 
         private void DrawTopBar(float width)
@@ -287,10 +240,6 @@ namespace SanteKerbal
             GUILayout.Label(title, titleStyle, GUILayout.Height(bar - U(2)));
             GUILayout.FlexibleSpace();
             GUILayout.Label(KSPUtil.PrintDateCompact(Planetarium.GetUniversalTime(), true), clockStyle, GUILayout.Height(bar - U(2)));
-            if (GUILayout.Button("-", smallButton, GUILayout.Width(U(24)), GUILayout.Height(bar - U(4))))
-                zoom = Mathf.Max(0.6f, zoom - 0.1f);
-            if (GUILayout.Button("+", smallButton, GUILayout.Width(U(24)), GUILayout.Height(bar - U(4))))
-                zoom = Mathf.Min(1.6f, zoom + 0.1f);
             if (GUILayout.Button("X", smallButton, GUILayout.Width(U(24)), GUILayout.Height(bar - U(4))))
                 Close();
             GUILayout.EndHorizontal();

@@ -227,6 +227,19 @@ namespace SanteKerbal
                         Hibernation.Do(action, k, pcm, v);
                     GUILayout.EndHorizontal();
                 }
+                else if (k.Dead && Hibernation.BodyDestination(v, pcm) != null)
+                {
+                    // Un mort bloque une place de caisson : on peut déplacer son corps
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(U(16));
+                    if (GUILayout.Button("Déplacer le corps", smallButton, GUILayout.Width(U(150))))
+                        Hibernation.MoveBody(k, pcm, v);
+                    GUILayout.EndHorizontal();
+                }
+                else if (!k.Dead && !k.Asleep && !k.Waking && Hibernation.Available && Hibernation.HasCryoPod(v))
+                {
+                    GUILayout.Label("<color=#a0a0a0>   Hibernation impossible : caissons pleins.</color>", richLabel);
+                }
 
                 if (k.Waking)
                 {
