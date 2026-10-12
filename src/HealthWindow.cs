@@ -157,7 +157,64 @@ namespace SanteKerbal
             GUILayout.Space(6);
             LifeResources.GetTotals(vessel, LifeResources.Water, out double water, out double waterMax);
             LifeResources.GetTotals(vessel, LifeResources.Food, out double food, out double foodMax);
-            SupplyPanel.Draw(water, waterMax, food, foodMax, alive, Equipment.FromParts(vessel.parts));
+            Equipment eq = Equipment.FromParts(vessel.parts);
+            SupplyPanel.Draw(water, waterMax, food, foodMax, alive, eq);
+
+            if (Settings.PowerGraph && PowerHistory.HasData)
+                DrawPower(vessel, eq, crew);
+        }
+
+        // Échelle choisie pour la courbe électrique (conservée pendant la session)
+        private static int powerScale;
+
+        /// <summary>Courbe de charge des batteries, bilan net, estimation et part de la survie.</summary>
+        private void DrawPower(Vessel vessel, Equipment eq, List<ProtoCrewMember> crew)
+        {
+            GUILayout.Space(6);
+            double amount = PowerHistory.Amount, capacity = PowerHistory.Capacity, rate = PowerHistory.NetRate;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"<b>Électricité</b> : {amount:F0} / {capacity:F0} ({amount / capacity:P0})", richLabelStyle);
+            GUILayout.FlexibleSpace();
+            for (int i = 0; i < PowerHistory.ScaleLabels.Length; i++)
+                if (GUILayout.Toggle(powerScale == i, PowerHistory.ScaleLabels[i], GUI.skin.button, GUILayout.Width(58)))
+                    powerScale = i;
+            GUILayout.EndHorizontal();
+
+            Rect graph = GUILayoutUtility.GetRect(100, 60, GUILayout.ExpandWidth(true), GUILayout.Height(60));
+            PowerHistory.Draw(graph, powerScale);
+
+            // Bilan net et estimation
+            string trend;
+            if (rate > 0.005)
+            {
+                string full = capacity - amount > 0.5 ? $", pleines dans {KSPUtil.PrintTimeCompact((capacity - amount) / rate, false)}" : ", pleines";
+                trend = $"<color=#7fe08a>+{rate:F2}/s en charge{full}</color>";
+            }
+            else if (rate < -0.005)
+                trend = $"<color=#ff8060>{rate:F2}/s en décharge, vides dans {KSPUtil.PrintTimeCompact(amount / -rate, false)}</color>";
+            else
+                trend = "Stable";
+            GUILayout.Label(trend, richLabelStyle);
+
+            // Part de la survie dans la consommation
+            int sleepers = 0;
+            foreach (ProtoCrewMember pcm in crew)
+            {
+                KerbalHealth k = HealthScenario.Instance.Get(pcm);
+                if (k.Asleep && !k.Dead) sleepers++;
+            }
+            double cryo = sleepers * Settings.CryoEcPerSecond;
+            double recyclers = 0, greenhouses = 0;
+            foreach (ModuleSKRecycler r in eq.Recyclers) recyclers += r.ecPerSecond;
+            foreach (ModuleSKGreenhouse g in eq.Greenhouses) greenhouses += g.ecPerSecond;
+            if (cryo + recyclers + greenhouses > 0)
+            {
+                var parts = new List<string>();
+                if (cryo > 0) parts.Add($"caissons {cryo:F2}/s");
+                if (greenhouses > 0) parts.Add($"serres {greenhouses:F2}/s");
+                if (recyclers > 0) parts.Add($"recycleurs {recyclers:F2}/s");
+                GUILayout.Label("Survie : " + string.Join(", ", parts));
+            }
         }
 
         private void DrawKerbal(ProtoCrewMember pcm, KerbalHealth k, Vessel vessel)

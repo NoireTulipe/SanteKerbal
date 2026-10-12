@@ -169,6 +169,9 @@ namespace SanteKerbal
         [GameParameters.CustomParameterUI("Sons du moniteur", toolTip = "Bip à chaque battement (fenêtre ouverte) et bip continu à la mort.")]
         public bool monitorSound = true;
 
+        [GameParameters.CustomParameterUI("Courbe électrique", toolTip = "Charge des batteries et bilan électrique dans la fenêtre de vol.")]
+        public bool powerGraph = true;
+
         [GameParameters.CustomParameterUI("Outils de test", toolTip = "Boutons -20 / +20 / Tuer dans la fenêtre, export des textures.")]
         public bool debugTools = Settings.Defaults.DebugTools;
 

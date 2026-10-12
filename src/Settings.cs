@@ -62,6 +62,7 @@ namespace SanteKerbal
         public static bool Monitor = true;       // moniteur cardiaque dans la fenêtre
         public static bool MonitorSound = true;  // bips du moniteur et bip continu de la mort
         public static bool PortraitMonitor = true; // électrocardiogramme au-dessus des portraits
+        public static bool PowerGraph = true;      // courbe électrique dans la fenêtre
 
         // Consommation, en unités par Kerbal et par jour de jeu
         public static double WaterPerDay = 3.0;
@@ -228,6 +229,7 @@ namespace SanteKerbal
             Monitor = display.monitor;
             MonitorSound = display.monitorSound;
             PortraitMonitor = display.portraitMonitor;
+            PowerGraph = display.powerGraph;
             DeathPortrait = DeathViews.Parse(display.deathView, Defaults.DeathPortrait);
             DebugTools = display.debugTools;
 
@@ -242,7 +244,7 @@ namespace SanteKerbal
         public static string Describe()
         {
             return $"actif={Enabled}, G={GEffects}, chaleur={HeatEffects}, repos KSC={KscRest}, hibernation={Hibernation}, " +
-                   $"dépérissement={VisualDecline}, moniteur={Monitor} (son={MonitorSound}, portraits={PortraitMonitor}), portrait d'un mort={DeathViews.Label(DeathPortrait)}, " +
+                   $"dépérissement={VisualDecline}, moniteur={Monitor} (son={MonitorSound}, portraits={PortraitMonitor}), courbe élec={PowerGraph}, portrait d'un mort={DeathViews.Label(DeathPortrait)}, " +
                    $"eau={WaterPerDay}/j, nourriture={FoodPerDay}/j, survie sans eau={DaysWithoutWater} j, " +
                    $"sans nourriture={DaysWithoutFood} j, régén={RegenPerDay}/j, " +
                    $"G élevés={HighG} (après {HighGGraceSeconds} s, {HighGDamagePerSecond}/s), " +
