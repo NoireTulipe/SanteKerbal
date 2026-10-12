@@ -158,6 +158,9 @@ namespace SanteKerbal
         [GameParameters.CustomParameterUI("Moniteur cardiaque", toolTip = "Électrocardiogramme de chaque Kerbal dans la fenêtre de vol.")]
         public bool monitor = true;
 
+        [GameParameters.CustomParameterUI("Moniteur sur les portraits", toolTip = "Électrocardiogramme au-dessus du portrait de chaque Kerbal.")]
+        public bool portraitMonitor = true;
+
         [GameParameters.CustomParameterUI("Sons du moniteur", toolTip = "Bip à chaque battement (fenêtre ouverte) et bip continu à la mort.")]
         public bool monitorSound = true;
 
@@ -175,7 +178,7 @@ namespace SanteKerbal
         {
             if (!SKSection.ModEnabled(parameters))
                 return false;
-            if (member.Name == nameof(monitorSound))
+            if (member.Name == nameof(monitorSound) || member.Name == nameof(portraitMonitor))
                 return monitor;
             return true;
         }
