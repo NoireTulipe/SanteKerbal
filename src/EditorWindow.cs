@@ -127,6 +127,8 @@ namespace SanteKerbal
 
         private void DrawWindow(int id)
         {
+            if (!Settings.Enabled)
+                GUILayout.Label("SantéKerbal est désactivé pour cette partie : les stocks sont indicatifs.");
             if (seats == 0)
             {
                 GUILayout.Label("Aucune place habitable sur ce vaisseau.");

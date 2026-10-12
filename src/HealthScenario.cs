@@ -33,12 +33,15 @@ namespace SanteKerbal
             // Déclaration officielle des morts à la récupération (après la remise « disponible » par KSP)
             GameEvents.onVesselRecoveryProcessing.Add(OnRecoveryProcessing);
             GameEvents.onVesselRecoveryProcessingComplete.Add(OnRecoveryProcessing);
+            GameEvents.OnGameSettingsApplied.Add(Settings.ApplyGame);
+            Settings.ApplyGame();
         }
 
         public void OnDestroy()
         {
             GameEvents.onVesselRecoveryProcessing.Remove(OnRecoveryProcessing);
             GameEvents.onVesselRecoveryProcessingComplete.Remove(OnRecoveryProcessing);
+            GameEvents.OnGameSettingsApplied.Remove(Settings.ApplyGame);
             if (Instance == this)
                 Instance = null;
         }
@@ -138,6 +141,12 @@ namespace SanteKerbal
                 return;
 
             double now = Planetarium.GetUniversalTime();
+            if (!Settings.Enabled)
+            {
+                foreach (Guid id in lastUpdate.Keys.ToList())
+                    lastUpdate[id] = now;
+                return;
+            }
             bool log = Settings.DebugLogInterval > 0 && Time.realtimeSinceStartup >= nextDebugLog;
             if (log)
                 nextDebugLog = Time.realtimeSinceStartup + Settings.DebugLogInterval;
@@ -152,7 +161,7 @@ namespace SanteKerbal
                 BackgroundTick(v, dt, log);
             }
 
-            if (TryTick(Guid.Empty, now, BackgroundTickSeconds, out double restDt))
+            if (TryTick(Guid.Empty, now, BackgroundTickSeconds, out double restDt) && Settings.KscRest)
                 RestAtKSC(restDt);
         }
 

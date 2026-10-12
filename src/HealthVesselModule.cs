@@ -45,13 +45,19 @@ namespace SanteKerbal
             if (vessel == null || !vessel.loaded || vessel.isEVA || scenario == null)
                 return;
 
+            double now = Planetarium.GetUniversalTime();
+            if (!Settings.Enabled)
+            {
+                scenario.SetLastUpdate(vessel.id, now);   // pas de rattrapage à la réactivation
+                return;
+            }
+
             // G et chaleur : à chaque pas de physique, seulement quand la physique tourne vraiment
             if (!vessel.packed)
                 PhysicalEffects(TimeWarp.fixedDeltaTime);
 
             // Horloge partagée avec la simulation en arrière-plan : pas de double comptage
             // quand le vaisseau passe de non chargé à chargé
-            double now = Planetarium.GetUniversalTime();
             double dt = now - scenario.GetLastUpdate(vessel.id, now);
             if (dt < 0)
             {
@@ -69,11 +75,12 @@ namespace SanteKerbal
 
         private void PhysicalEffects(double dt)
         {
-            if (Time.time >= ignoreGUntil)
+            if (Settings.GEffects && Time.time >= ignoreGUntil)
                 GForces(dt);
             else
                 highGTime = lethalGTime = 0;
-            Heat(dt);
+            if (Settings.HeatEffects)
+                Heat(dt);
         }
 
         private void GForces(double dt)

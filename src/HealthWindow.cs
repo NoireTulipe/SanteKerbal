@@ -96,7 +96,12 @@ namespace SanteKerbal
         private void DrawWindow(int id)
         {
             Vessel vessel = FlightGlobals.ActiveVessel;
-            if (vessel == null)
+            if (!Settings.Enabled)
+            {
+                GUILayout.Label("SantéKerbal est désactivé pour cette partie.");
+                GUILayout.Label("(Échap > Paramètres de difficulté > onglet SantéKerbal)");
+            }
+            else if (vessel == null)
             {
                 GUILayout.Label("Aucun vaisseau actif.");
             }

@@ -5,10 +5,20 @@ namespace SanteKerbal
     /// <summary>
     /// Réglages lus dans GameData/SanteKerbal/SanteKerbal.cfg (nœud SANTEKERBAL_SETTINGS).
     /// Les valeurs ci-dessous sont les valeurs par défaut si le fichier ou une clé manque.
+    /// Les principaux réglages sont ensuite remplacés par ceux de la partie en cours
+    /// (paramètres de difficulté, onglet SantéKerbal) : voir ApplyGame.
     /// </summary>
     internal static class Settings
     {
         public const string NodeName = "SANTEKERBAL_SETTINGS";
+
+        // Interrupteurs (réglables par partie)
+        public static bool Enabled = true;
+        public static bool GEffects = true;
+        public static bool HeatEffects = true;
+        public static bool KscRest = true;
+        public static bool VisualDecline = true;
+        public static bool SkullFlicker = true;
 
         // Consommation, en unités par Kerbal et par jour de jeu
         public static double WaterPerDay = 3.0;
@@ -54,6 +64,14 @@ namespace SanteKerbal
 
         public static bool Loaded { get; private set; }
 
+        /// <summary>Valeurs du .cfg, qui servent de réglages « Normal » et de base aux préréglages.</summary>
+        public static class Defaults
+        {
+            public static double WaterPerDay = 3, FoodPerDay = 1, DaysWithoutWater = 3, DaysWithoutFood = 21, RegenPerDay = 5;
+            public static double HighG = 6, LethalG = 20, HeatThreshold = 330;
+            public static bool DeathPortraitStatic = true, DebugTools = false;
+        }
+
         public static void Load()
         {
             ConfigNode[] nodes = GameDatabase.Instance.GetConfigNodes(NodeName);
@@ -94,13 +112,60 @@ namespace SanteKerbal
             n.TryGetValue("debugLogInterval", ref DebugLogInterval);
             n.TryGetValue("debugTools", ref DebugTools);
 
+            Defaults.WaterPerDay = WaterPerDay;
+            Defaults.FoodPerDay = FoodPerDay;
+            Defaults.DaysWithoutWater = DaysWithoutWater;
+            Defaults.DaysWithoutFood = DaysWithoutFood;
+            Defaults.RegenPerDay = RegenPerDay;
+            Defaults.HighG = HighG;
+            Defaults.LethalG = LethalG;
+            Defaults.HeatThreshold = HeatThreshold;
+            Defaults.DeathPortraitStatic = DeathPortraitStatic;
+            Defaults.DebugTools = DebugTools;
+
             Loaded = true;
             Log.Info("Réglages chargés : " + Describe());
         }
 
+        /// <summary>Remplace les réglages par ceux de la partie en cours (paramètres de difficulté).</summary>
+        public static void ApplyGame()
+        {
+            GameParameters p = HighLogic.CurrentGame?.Parameters;
+            if (p == null)
+                return;
+            SKCrewParams crew = p.CustomParams<SKCrewParams>();
+            SKDangerParams danger = p.CustomParams<SKDangerParams>();
+            SKDisplayParams display = p.CustomParams<SKDisplayParams>();
+            if (crew == null || danger == null || display == null)
+                return;
+
+            Enabled = crew.enabled;
+            DaysWithoutWater = Mathf.Max(0.1f, crew.daysWithoutWater);
+            DaysWithoutFood = Mathf.Max(0.1f, crew.daysWithoutFood);
+            RegenPerDay = Mathf.Max(0f, crew.regenPerDay);
+            WaterPerDay = Defaults.WaterPerDay * Mathf.Max(0f, crew.consumption);
+            FoodPerDay = Defaults.FoodPerDay * Mathf.Max(0f, crew.consumption);
+            KscRest = crew.kscRest;
+
+            GEffects = danger.gEffects;
+            HighG = danger.highG;
+            LethalG = Mathf.Max(danger.lethalG, danger.highG);
+            HeatEffects = danger.heatEffects;
+            HeatThreshold = danger.heatThreshold;
+
+            VisualDecline = display.visualDecline;
+            DeathPortraitStatic = display.deathPortraitStatic;
+            SkullFlicker = display.skullFlicker;
+            DebugTools = display.debugTools;
+
+            Log.Info("Réglages de la partie appliqués : " + Describe());
+        }
+
         public static string Describe()
         {
-            return $"eau={WaterPerDay}/j, nourriture={FoodPerDay}/j, survie sans eau={DaysWithoutWater} j, " +
+            return $"actif={Enabled}, G={GEffects}, chaleur={HeatEffects}, repos KSC={KscRest}, " +
+                   $"dépérissement={VisualDecline}, crâne intermittent={SkullFlicker}, " +
+                   $"eau={WaterPerDay}/j, nourriture={FoodPerDay}/j, survie sans eau={DaysWithoutWater} j, " +
                    $"sans nourriture={DaysWithoutFood} j, régén={RegenPerDay}/j, " +
                    $"G élevés={HighG} (après {HighGGraceSeconds} s, {HighGDamagePerSecond}/s), " +
                    $"G mortels={LethalG} pendant {LethalGSeconds} s, " +

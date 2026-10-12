@@ -37,7 +37,7 @@ namespace SanteKerbal
         /// </summary>
         public void LateUpdate()
         {
-            if (HealthScenario.Instance == null)
+            if (HealthScenario.Instance == null || !Settings.Enabled)
                 return;
 
             foreach (Vessel v in FlightGlobals.VesselsLoaded)
@@ -63,8 +63,7 @@ namespace SanteKerbal
                 }
             }
 
-            if (!Settings.DeathPortraitStatic)
-                ShowDeadBodiesInPortraits();
+            UpdateDeadPortraits();
             CheckIVACamera();
 
             // Oubli des modèles détruits (Unity : un objet détruit vaut null)
@@ -76,18 +75,50 @@ namespace SanteKerbal
                 looks.Remove(kerbal);
         }
 
+        // Crâne intermittent : prochain « retour du signal » et fin de l'apparition, par portrait
+        private readonly Dictionary<KerbalPortrait, float> nextFlicker = new Dictionary<KerbalPortrait, float>();
+        private readonly Dictionary<KerbalPortrait, float> flickerEnd = new Dictionary<KerbalPortrait, float>();
+        private const float FlickerMinInterval = 3f, FlickerMaxInterval = 8f;
+        private const float FlickerMinDuration = 0.12f, FlickerMaxDuration = 0.35f;
+
         /// <summary>
-        /// KSP brouille le portrait d'un Kerbal inactif ; on annule ce brouillage après son Update
-        /// pour qu'on voie le corps en pose de mort.
+        /// KSP brouille le portrait d'un Kerbal inactif (nos morts). Selon les réglages, on annule ce
+        /// brouillage après son Update (on voit le corps), ou on le laisse en le perçant par instants
+        /// (le visage du mort apparaît une fraction de seconde).
         /// </summary>
-        private static void ShowDeadBodiesInPortraits()
+        private void UpdateDeadPortraits()
         {
             KerbalPortraitGallery gallery = KerbalPortraitGallery.Instance;
             if (gallery == null || gallery.Portraits == null)
                 return;
+            float now = Time.time;
             foreach (KerbalPortrait portrait in gallery.Portraits)
             {
-                if (portrait != null && portrait.crewPcm != null && Mortality.IsDead(portrait.crewPcm))
+                if (portrait == null || portrait.crewPcm == null || !Mortality.IsDead(portrait.crewPcm))
+                    continue;
+
+                bool show;
+                if (!Settings.DeathPortraitStatic)
+                {
+                    show = true;
+                }
+                else if (!Settings.SkullFlicker)
+                {
+                    show = false;
+                }
+                else
+                {
+                    if (!nextFlicker.TryGetValue(portrait, out float next))
+                        next = nextFlicker[portrait] = now + Random.Range(FlickerMinInterval, FlickerMaxInterval);
+                    if (now >= next)
+                    {
+                        flickerEnd[portrait] = now + Random.Range(FlickerMinDuration, FlickerMaxDuration);
+                        nextFlicker[portrait] = now + Random.Range(FlickerMinInterval, FlickerMaxInterval);
+                    }
+                    show = flickerEnd.TryGetValue(portrait, out float end) && now < end;
+                }
+
+                if (show)
                     portrait.OverlayUpdate(false, (float)Kerbal.States.ALIVE);
             }
         }

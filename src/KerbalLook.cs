@@ -48,7 +48,7 @@ namespace SanteKerbal
             float amount;
             if (k.Dead)
                 amount = 1f;
-            else if (Settings.VisualStartHealth <= 0)
+            else if (!Settings.VisualDecline || Settings.VisualStartHealth <= 0)
                 amount = 0f;
             else
                 amount = Mathf.Clamp01((float)((Settings.VisualStartHealth - k.Health) / Settings.VisualStartHealth));
