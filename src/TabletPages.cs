@@ -283,22 +283,22 @@ namespace SanteKerbal
 
         private void DrawGreenhousePage(Vessel v)
         {
-            int count = 0;
-            double produced = 0;
-            foreach (Part part in v.parts)
-                foreach (PartModule m in part.Modules)
-                    if (m is ModuleSKGreenhouse g)
-                    {
-                        count++;
-                        if (g.isActive) produced += g.foodPerDay;
-                        DrawEquipment(part, g, $"+{g.foodPerDay:F1} nourriture/j, -{g.foodPerDay * g.waterPerFood:F1} eau/j, {g.ecPerSecond:F2} élec/s");
-                    }
-            if (count == 0)
+            var list = Equipments<ModuleSKGreenhouse>(v);
+            if (list.Count == 0)
             {
                 GUILayout.Label("Aucune serre à bord.");
-                GUILayout.Label("<color=#a0a0a0>Serre hydroponique SK-G2 : catégorie Utilitaire.</color>", richLabel);
                 return;
             }
+
+            // Bilan global : production des serres allumées face aux besoins de l'équipage éveillé
+            double produced = 0, water = 0, ec = 0;
+            foreach (var e in list)
+                if (e.module.isActive)
+                {
+                    produced += e.module.foodPerDay;
+                    water += e.module.foodPerDay * e.module.waterPerFood;
+                    ec += e.module.ecPerSecond;
+                }
             int eaters = 0;
             foreach (ProtoCrewMember pcm in v.GetVesselCrew())
             {
@@ -306,34 +306,97 @@ namespace SanteKerbal
                 if (!k.Dead && !k.Asleep) eaters++;
             }
             double need = eaters * Settings.FoodPerDay;
-            GUILayout.Space(U(4));
-            GUILayout.Label(produced >= need
-                ? $"<color=#7fe08a>Les serres nourrissent tout l'équipage ({produced:F1} / {need:F1} par jour).</color>"
-                : $"Les serres couvrent {produced:F1} des {need:F1} rations quotidiennes.", richLabel);
+            GUILayout.Label(produced >= need && need > 0
+                ? $"<color=#7fe08a>Les serres nourrissent tout l'équipage ({produced:F1} / {need:F1} rations par jour).</color>"
+                : $"Production : {produced:F1} des {need:F1} rations quotidiennes.", richLabel);
+            GUILayout.Label($"<color=#a0a0a0>Consommation des serres allumées : {water:F1} eau/j, {ec:F2} élec/s</color>", richLabel);
+            DrawAllOnOff(list);
+
+            for (int n = 0; n < list.Count; n++)
+            {
+                ModuleSKGreenhouse g = list[n].module;
+                DrawEquipment(list[n].part, g, Numbered("Serre", n, list.Count),
+                    $"+{g.foodPerDay:F1} nourriture/j, -{g.foodPerDay * g.waterPerFood:F1} eau/j, {g.ecPerSecond:F2} élec/s");
+            }
         }
 
         private void DrawRecyclerPage(Vessel v)
         {
-            int count = 0;
-            foreach (Part part in v.parts)
-                foreach (PartModule m in part.Modules)
-                    if (m is ModuleSKRecycler r)
-                    {
-                        count++;
-                        DrawEquipment(part, r, $"{r.recycleRatio:P0} de l'eau de {r.kerbalsServed:F0} Kerbal(s), {r.ecPerSecond:F2} élec/s");
-                    }
-            if (count == 0)
+            var list = Equipments<ModuleSKRecycler>(v);
+            if (list.Count == 0)
             {
                 GUILayout.Label("Aucun recycleur à bord.");
-                GUILayout.Label("<color=#a0a0a0>Recycleur d'eau SK-R3 : catégorie Utilitaire.</color>", richLabel);
+                return;
+            }
+
+            // Bilan global : Kerbals servis par les recycleurs allumés face à l'équipage éveillé
+            double served = 0, ec = 0;
+            foreach (var e in list)
+                if (e.module.isActive)
+                {
+                    served += e.module.kerbalsServed;
+                    ec += e.module.ecPerSecond;
+                }
+            int drinkers = 0;
+            foreach (ProtoCrewMember pcm in v.GetVesselCrew())
+            {
+                KerbalHealth k = HealthScenario.Instance.Get(pcm);
+                if (!k.Dead && !k.Asleep) drinkers++;
+            }
+            GUILayout.Label(served >= drinkers && drinkers > 0
+                ? $"<color=#7fe08a>L'eau de tout l'équipage est recyclée ({drinkers} / {served:F0} places).</color>"
+                : $"Eau recyclée pour {System.Math.Min(served, drinkers):F0} des {drinkers} Kerbals éveillés.", richLabel);
+            GUILayout.Label($"<color=#a0a0a0>Consommation des recycleurs allumés : {ec:F2} élec/s</color>", richLabel);
+            DrawAllOnOff(list);
+
+            for (int n = 0; n < list.Count; n++)
+            {
+                ModuleSKRecycler r = list[n].module;
+                DrawEquipment(list[n].part, r, Numbered("Recycleur", n, list.Count),
+                    $"{r.recycleRatio:P0} de l'eau de {r.kerbalsServed:F0} Kerbal(s), {r.ecPerSecond:F2} élec/s");
             }
         }
 
+        /// <summary>Équipements d'un type à bord, avec leur pièce, dans l'ordre du vaisseau.</summary>
+        private static List<(Part part, T module)> Equipments<T>(Vessel v) where T : ModuleSKEquipment
+        {
+            var list = new List<(Part, T)>();
+            foreach (Part part in v.parts)
+                foreach (PartModule m in part.Modules)
+                    if (m is T t)
+                        list.Add((part, t));
+            return list;
+        }
+
+        private static string Numbered(string name, int index, int count)
+        {
+            return count > 1 ? $"{name} {index + 1}" : name;
+        }
+
+        /// <summary>Boutons « Tout démarrer » / « Tout arrêter » (seulement s'il y en a plusieurs).</summary>
+        private void DrawAllOnOff<T>(List<(Part part, T module)> list) where T : ModuleSKEquipment
+        {
+            if (list.Count < 2)
+            {
+                GUILayout.Space(U(4));
+                return;
+            }
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Tout démarrer", smallButton, GUILayout.Width(U(130))))
+                foreach (var e in list)
+                    if (!e.module.isActive) e.module.Toggle();
+            if (GUILayout.Button("Tout arrêter", smallButton, GUILayout.Width(U(130))))
+                foreach (var e in list)
+                    if (e.module.isActive) e.module.Toggle();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(U(4));
+        }
+
         /// <summary>Une ligne par équipement : nom, état, caractéristiques, bouton marche / arrêt.</summary>
-        private void DrawEquipment(Part part, ModuleSKEquipment m, string specs)
+        private void DrawEquipment(Part part, ModuleSKEquipment m, string name, string specs)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"<b>{part.partInfo.title}</b>", richLabel);
+            GUILayout.Label($"<b>{name}</b>  <color=#a0a0a0>{part.partInfo.title}</color>", richLabel);
             GUILayout.FlexibleSpace();
             if (GUILayout.Button(m.isActive ? "Arrêter" : "Démarrer", smallButton, GUILayout.Width(U(90))))
                 m.Toggle();

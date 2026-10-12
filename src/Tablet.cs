@@ -28,6 +28,29 @@ namespace SanteKerbal
 
         private static readonly Page[] HomeIcons = { Page.Health, Page.Crew, Page.Stocks, Page.Greenhouse, Page.Recycler, Page.Power };
 
+        /// <summary>Icônes de l'accueil : Serre et Recycleur seulement si le vaisseau en possède.</summary>
+        private static System.Collections.Generic.List<Page> VisibleIcons(Vessel v)
+        {
+            var list = new System.Collections.Generic.List<Page>();
+            foreach (Page p in HomeIcons)
+                if ((p != Page.Greenhouse && p != Page.Recycler) || EquipmentCount(v, p) > 0)
+                    list.Add(p);
+            return list;
+        }
+
+        /// <summary>Nombre de serres ou de recycleurs à bord (allumés ou non).</summary>
+        private static int EquipmentCount(Vessel v, Page p)
+        {
+            if (v == null || v.isEVA)
+                return 0;
+            int n = 0;
+            foreach (Part part in v.parts)
+                foreach (PartModule m in part.Modules)
+                    if ((p == Page.Greenhouse && m is ModuleSKGreenhouse) || (p == Page.Recycler && m is ModuleSKRecycler))
+                        n++;
+            return n;
+        }
+
         // Position fixe, choisie par NoireTulipe : collée au bord droit de l'écran, en haut,
         // un peu plus haute que l'écran (738 px pour 720 px de haut). Proportionnelle à la hauteur de
         // l'écran, pour garder la même disposition à toutes les résolutions.
@@ -259,18 +282,26 @@ namespace SanteKerbal
             }
         }
 
-        /// <summary>Écran d'accueil : 6 icônes en 3 x 2, pastille rouge en cas de problème.</summary>
+        /// <summary>
+        /// Écran d'accueil : icônes sur 3 colonnes (dernière ligne centrée), compteur si plusieurs
+        /// équipements du même type, pastille rouge en cas de problème.
+        /// </summary>
         private void DrawHome(Rect area)
         {
-            const int cols = 3, rows = 2;
+            const int cols = 3;
+            Vessel v = FlightGlobals.ActiveVessel;
+            var icons = VisibleIcons(v);
+            int rows = Mathf.Max(2, (icons.Count + cols - 1) / cols);
             float cellW = area.width / cols, cellH = area.height / rows;
             float icon = Mathf.Min(cellW, cellH - U(22)) * 0.72f;
-            Vessel v = FlightGlobals.ActiveVessel;
 
-            for (int i = 0; i < HomeIcons.Length; i++)
+            for (int i = 0; i < icons.Count; i++)
             {
-                Page p = HomeIcons[i];
-                float cx = (i % cols) * cellW, cy = (i / cols) * cellH;
+                Page p = icons[i];
+                int row = i / cols, col = i % cols;
+                int inRow = Mathf.Min(cols, icons.Count - row * cols);
+                float offset = (cols - inRow) * cellW / 2f;   // dernière ligne incomplète : centrée
+                float cx = offset + col * cellW, cy = row * cellH;
                 var iconRect = new Rect(cx + (cellW - icon) / 2f, cy + (cellH - icon - U(20)) / 2f, icon, icon);
                 var labelRect = new Rect(cx, iconRect.yMax + U(2), cellW, U(20));
                 var hit = new Rect(cx + U(4), cy + U(4), cellW - U(8), cellH - U(8));
@@ -285,6 +316,19 @@ namespace SanteKerbal
                 if (iconTex[(int)p] != null)
                     GUI.DrawTexture(iconRect, iconTex[(int)p], ScaleMode.ScaleToFit);
                 GUI.Label(labelRect, PageTitle(p), iconLabelStyle);
+
+                // Compteur « x2 » quand il y a plusieurs serres ou recycleurs
+                int count = (p == Page.Greenhouse || p == Page.Recycler) ? EquipmentCount(v, p) : 0;
+                if (count > 1)
+                {
+                    float bw = U(30), bh = U(20);
+                    var badge = new Rect(iconRect.xMax - bw * 0.7f, iconRect.yMax - bh, bw, bh);
+                    Color old = GUI.color;
+                    GUI.color = new Color(0.1f, 0.35f, 0.6f, 0.95f);
+                    GUI.DrawTexture(badge, Texture2D.whiteTexture);
+                    GUI.color = old;
+                    GUI.Label(badge, "x" + count, barLabel);
+                }
 
                 if (v != null && HasAlert(p, v))
                 {
