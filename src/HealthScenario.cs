@@ -10,6 +10,16 @@ namespace SanteKerbal
     /// l'heure du dernier calcul de chaque vaisseau, et fait évoluer en arrière-plan les vaisseaux
     /// non chargés ainsi que les Kerbals au repos à la KSC.
     /// </summary>
+    /// <summary>Bilan électrique estimé d'un vaisseau non chargé, par seconde.</summary>
+    public struct PowerReport
+    {
+        public readonly double Production, Solar, Generators, Need, Covered;
+        public PowerReport(double production, double solar, double generators, double need, double covered)
+        {
+            Production = production; Solar = solar; Generators = generators; Need = need; Covered = covered;
+        }
+    }
+
     [KSPScenario(ScenarioCreationOptions.AddToAllGames,
         GameScenes.FLIGHT, GameScenes.SPACECENTER, GameScenes.TRACKSTATION, GameScenes.EDITOR)]
     public class HealthScenario : ScenarioModule
@@ -25,6 +35,9 @@ namespace SanteKerbal
         private readonly Dictionary<Guid, double> lastUpdate = new Dictionary<Guid, double>();
 
         private float nextDebugLog;
+
+        /// <summary>Dernier bilan électrique estimé des vaisseaux non chargés (pour l'affichage).</summary>
+        public readonly Dictionary<Guid, PowerReport> LastPower = new Dictionary<Guid, PowerReport>();
         private float nextSettingsCheck;
 
         public override void OnAwake()
@@ -225,6 +238,13 @@ namespace SanteKerbal
                 return;
 
             var store = new ProtoStore(pv);
+
+            // Électricité : production estimée, consommation des équipements et des caissons, batteries
+            double production = PowerSim.UnloadedProduction(v, out double solar, out double generators);
+            double needPerSecond = eq.EcPerSecond + sleepers.Count * Settings.CryoEcPerSecond;
+            store.UnloadedEcFraction = PowerSim.Resolve(store, needPerSecond, production, dt);
+            LastPower[v.id] = new PowerReport(production, solar, generators, needPerSecond, store.UnloadedEcFraction);
+
             Hibernation.Tick(store, sleepers, dt, v);
             NeedsResult r = LifeSupportSim.Consume(store, alive.Count, eq, dt);
             foreach (KerbalHealth k in alive)
@@ -237,7 +257,9 @@ namespace SanteKerbal
             if (log)
             {
                 Log.Info($"[{v.vesselName}] (non chargé) dt={dt:F0}s eau={store.Amount(LifeResources.Water):F2} ({r.WaterFrac:P0}) " +
-                         $"nourriture={store.Amount(LifeResources.Food):F2} ({r.FoodFrac:P0}) élec={r.EcFrac:P0} | " +
+                         $"nourriture={store.Amount(LifeResources.Food):F2} ({r.FoodFrac:P0}) " +
+                         $"élec={store.Amount(LifeSupportSim.ElectricCharge):F1} (+{production:F2}/s dont solaire {solar:F2} RTG {generators:F2}, " +
+                         $"-{needPerSecond:F2}/s, couvert {store.UnloadedEcFraction:P0}) | " +
                          string.Join(", ", alive.Select(k => k.ToString())));
             }
         }

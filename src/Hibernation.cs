@@ -200,8 +200,7 @@ namespace SanteKerbal
 
         /// <summary>
         /// Électricité des dormeurs pendant dt ; sans courant, ils perdent de la santé.
-        /// Hors chargement, comme pour les autres équipements : courant disponible tant que
-        /// les batteries ne sont pas vides, sans les vider.
+        /// Hors chargement, l'électricité a déjà été résolue par PowerSim pour tout le vaisseau.
         /// </summary>
         public static void Tick(IVesselStore store, List<KerbalHealth> sleepers, double dt, Vessel vessel)
         {
@@ -212,7 +211,7 @@ namespace SanteKerbal
             if (store.IsLoaded)
                 frac = need > 0 ? System.Math.Min(1.0, store.Take(LifeSupportSim.ElectricCharge, need) / need) : 1;
             else
-                frac = store.Amount(LifeSupportSim.ElectricCharge) > 0.01 ? 1 : 0;
+                frac = store.UnloadedEcFraction;
 
             double days = dt / KSPUtil.dateTimeFormatter.Day;
             double damage = (1.0 - frac) * Settings.CryoUnpoweredDamagePerDay * days;

@@ -54,6 +54,10 @@ namespace SanteKerbal
         public static double CryoWakeHours = 2;              // durée du réveil (heures de jeu)
         public static double CryoWakeDamage = 5;             // santé perdue au réveil
         public static double CryoUnpoweredDamagePerDay = 25; // perte par jour sans électricité
+
+        // Électricité des vaisseaux non chargés : rendement moyen des panneaux solaires orientables
+        // (ombre de la planète comprise) ; les panneaux fixes produisent la moitié
+        public static double UnloadedSolarFactor = 0.6;
         public static bool VisualDecline = true;
         public static bool Monitor = true;       // moniteur cardiaque dans la fenêtre
         public static bool MonitorSound = true;  // bips du moniteur et bip continu de la mort
@@ -155,6 +159,7 @@ namespace SanteKerbal
             n.TryGetValue("cryoWakeHours", ref CryoWakeHours);
             n.TryGetValue("cryoWakeDamage", ref CryoWakeDamage);
             n.TryGetValue("cryoUnpoweredDamagePerDay", ref CryoUnpoweredDamagePerDay);
+            n.TryGetValue("unloadedSolarFactor", ref UnloadedSolarFactor);
             n.TryGetValue("debugLogInterval", ref DebugLogInterval);
             n.TryGetValue("debugTools", ref DebugTools);
 

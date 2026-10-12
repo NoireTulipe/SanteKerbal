@@ -10,6 +10,8 @@ namespace SanteKerbal
         void Put(string resource, double amount);      // stocke dans la limite de la place
         double Amount(string resource);
         bool IsLoaded { get; }
+        /// <summary>Vaisseau non chargé : part de la consommation électrique couverte, calculée par PowerSim.</summary>
+        double UnloadedEcFraction { get; }
     }
 
     /// <summary>Vaisseau chargé : ressources réelles des pièces.</summary>
@@ -18,6 +20,7 @@ namespace SanteKerbal
         private readonly Vessel vessel;
         public LoadedStore(Vessel vessel) { this.vessel = vessel; }
         public bool IsLoaded => true;
+        public double UnloadedEcFraction => 1.0;
 
         public double Take(string resource, double amount)
         {
@@ -44,6 +47,7 @@ namespace SanteKerbal
         private readonly ProtoVessel pv;
         public ProtoStore(ProtoVessel pv) { this.pv = pv; }
         public bool IsLoaded => false;
+        public double UnloadedEcFraction { get; set; } = 1.0;
 
         private IEnumerable<ProtoPartResourceSnapshot> Snapshots(string resource)
         {
@@ -189,15 +193,15 @@ namespace SanteKerbal
             var res = new NeedsResult { WaterFrac = 1, FoodFrac = 1, EcFrac = 1 };
             double days = dt / KSPUtil.dateTimeFormatter.Day;
 
-            // Électricité des équipements. Hors chargement, KSP ne simule pas les panneaux solaires :
-            // on considère qu'il y a du courant tant que les batteries ne sont pas vides, sans les vider.
+            // Électricité des équipements. Hors chargement, elle a déjà été résolue par PowerSim
+            // (production solaire et RTG estimée, batteries) pour tout le vaisseau.
             double ecNeed = eq.EcPerSecond * dt;
             if (ecNeed > 0)
             {
                 if (store.IsLoaded)
                     res.EcFrac = Math.Min(1.0, store.Take(ElectricCharge, ecNeed) / ecNeed);
                 else
-                    res.EcFrac = store.Amount(ElectricCharge) > 0.01 ? 1 : 0;
+                    res.EcFrac = store.UnloadedEcFraction;
             }
 
             // Eau de l'équipage, moins la part recyclée
