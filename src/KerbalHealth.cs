@@ -10,6 +10,7 @@ namespace SanteKerbal
         public string Name;
         public double Health = Max;
         public bool Dead;
+        public bool Asleep;   // en hibernation
 
         // Derniers états connus, pour n'envoyer les messages qu'au changement
         public bool LackWater;
@@ -39,6 +40,7 @@ namespace SanteKerbal
             node.AddValue("name", Name);
             node.AddValue("health", Health);
             node.AddValue("dead", Dead);
+            node.AddValue("asleep", Asleep);
             node.AddValue("lackWater", LackWater);
             node.AddValue("lackFood", LackFood);
         }
@@ -51,6 +53,7 @@ namespace SanteKerbal
             var k = new KerbalHealth(name);
             node.TryGetValue("health", ref k.Health);
             node.TryGetValue("dead", ref k.Dead);
+            node.TryGetValue("asleep", ref k.Asleep);
             node.TryGetValue("lackWater", ref k.LackWater);
             node.TryGetValue("lackFood", ref k.LackFood);
             return k;

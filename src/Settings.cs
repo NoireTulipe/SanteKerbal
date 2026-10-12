@@ -48,6 +48,8 @@ namespace SanteKerbal
         public static bool HeatEffects = true;
         public static bool KscRest = true;
         public static bool VisualDecline = true;
+        public static bool Monitor = true;       // moniteur cardiaque dans la fenêtre
+        public static bool MonitorSound = true;  // bips du moniteur et bip continu de la mort
 
         // Consommation, en unités par Kerbal et par jour de jeu
         public static double WaterPerDay = 3.0;
@@ -205,6 +207,8 @@ namespace SanteKerbal
             HeatThreshold = danger.heatThreshold;
 
             VisualDecline = display.visualDecline;
+            Monitor = display.monitor;
+            MonitorSound = display.monitorSound;
             DeathPortrait = DeathViews.Parse(display.deathView, Defaults.DeathPortrait);
             DebugTools = display.debugTools;
 
@@ -219,7 +223,7 @@ namespace SanteKerbal
         public static string Describe()
         {
             return $"actif={Enabled}, G={GEffects}, chaleur={HeatEffects}, repos KSC={KscRest}, " +
-                   $"dépérissement={VisualDecline}, portrait d'un mort={DeathViews.Label(DeathPortrait)}, " +
+                   $"dépérissement={VisualDecline}, moniteur={Monitor} (son={MonitorSound}), portrait d'un mort={DeathViews.Label(DeathPortrait)}, " +
                    $"eau={WaterPerDay}/j, nourriture={FoodPerDay}/j, survie sans eau={DaysWithoutWater} j, " +
                    $"sans nourriture={DaysWithoutFood} j, régén={RegenPerDay}/j, " +
                    $"G élevés={HighG} (après {HighGGraceSeconds} s, {HighGDamagePerSecond}/s), " +

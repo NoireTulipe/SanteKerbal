@@ -29,7 +29,7 @@ namespace SanteKerbal
                 return;
             if (k.Health <= 0)
             {
-                Mortality.Kill(k, cause, vessel != null ? vessel.vesselName : "?");
+                Mortality.Kill(k, cause, vessel);
                 Announce(vessel, $"{k.Name} est mort ({cause}).");
                 return;
             }

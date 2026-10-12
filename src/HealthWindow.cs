@@ -14,7 +14,8 @@ namespace SanteKerbal
         private const int WindowId = 0x5A17E;
 
         // Conservés d'une scène de vol à l'autre pendant la session
-        private static Rect windowRect = new Rect(200, 120, 340, 0);
+        private static Rect windowRect = new Rect(200, 120, 500, 0);
+        private const float WindowWidth = 500f;
         private static bool visible;
 
         private ApplicationLauncherButton button;
@@ -22,6 +23,9 @@ namespace SanteKerbal
 
         private GUIStyle barLabelStyle;
         private GUIStyle richLabelStyle;
+
+        // Moniteurs cardiaques des Kerbals du vaisseau actif, par nom
+        private readonly Dictionary<string, HeartMonitor> monitors = new Dictionary<string, HeartMonitor>();
 
         public void Start()
         {
@@ -74,6 +78,49 @@ namespace SanteKerbal
             button = null;
         }
 
+        /// <summary>Fait battre les moniteurs du vaisseau actif (fenêtre ouverte seulement).</summary>
+        public void Update()
+        {
+            Vessel vessel = FlightGlobals.ActiveVessel;
+            if (!visible || !Settings.Enabled || !Settings.Monitor || vessel == null || vessel.isEVA
+                || HealthScenario.Instance == null)
+                return;
+
+            float dt = Time.deltaTime;   // nul en pause : le tracé s'arrête aussi
+            double g = vessel.packed ? 1.0 : vessel.geeForce;
+            HeartMonitor loudest = null;
+            float loudestPitch = 1f;
+            double worstHealth = double.MaxValue;
+
+            foreach (ProtoCrewMember pcm in vessel.GetVesselCrew())
+            {
+                KerbalHealth k = HealthScenario.Instance.Get(pcm);
+                if (!monitors.TryGetValue(k.Name, out HeartMonitor m))
+                    monitors[k.Name] = m = new HeartMonitor();
+
+                float target = HeartMonitor.TargetBpm(k, g, CabinTemperature(vessel, pcm), out bool irregular);
+                bool beat = m.Advance(dt, target, irregular, k.Dead);
+
+                // Un seul bip à la fois : celui du Kerbal le plus mal en point (évite la cacophonie)
+                if (!k.Dead && k.Health < worstHealth)
+                {
+                    worstHealth = k.Health;
+                    loudest = beat ? m : null;
+                    loudestPitch = 0.9f + (Mathf.Abs(k.Name.GetHashCode()) % 5) * 0.05f;
+                }
+            }
+            if (loudest != null)
+                MonitorSounds.Beep(loudestPitch);
+        }
+
+        private static double CabinTemperature(Vessel vessel, ProtoCrewMember pcm)
+        {
+            foreach (Part p in vessel.parts)
+                if (p.protoModuleCrew.Contains(pcm))
+                    return p.temperature;
+            return 0;
+        }
+
         public void OnGUI()
         {
             if (!visible || uiHidden || HealthScenario.Instance == null)
@@ -90,7 +137,7 @@ namespace SanteKerbal
                 };
                 richLabelStyle = new GUIStyle(GUI.skin.label) { richText = true };
             }
-            windowRect = GUILayout.Window(WindowId, windowRect, DrawWindow, "SantéKerbal", GUILayout.Width(340));
+            windowRect = GUILayout.Window(WindowId, windowRect, DrawWindow, "SantéKerbal", GUILayout.Width(WindowWidth));
         }
 
         private void DrawWindow(int id)
@@ -156,9 +203,19 @@ namespace SanteKerbal
             GUILayout.BeginHorizontal();
             GUILayout.Label(k.Name, GUILayout.Width(150));
 
-            Rect bar = GUILayoutUtility.GetRect(150, 18, GUILayout.ExpandWidth(true));
+            Rect bar = GUILayoutUtility.GetRect(110, 18, GUILayout.Width(110));
             DrawBar(bar, k.Dead ? 0f : (float)(k.Health / KerbalHealth.Max), HealthColor(k));
             GUI.Label(bar, k.Dead ? "MORT" : k.Health.ToString("F0"), barLabelStyle);
+
+            if (Settings.Monitor && monitors.TryGetValue(k.Name, out HeartMonitor m))
+            {
+                GUILayout.Space(6);
+                Rect trace = GUILayoutUtility.GetRect(HeartMonitor.Width, HeartMonitor.Height,
+                    GUILayout.Width(HeartMonitor.Width), GUILayout.Height(HeartMonitor.Height));
+                m.Draw(trace, k.Dead ? new Color(0.6f, 0.6f, 0.6f) : MonitorColor(k));
+                GUILayout.Label(k.Dead ? "0" : m.Bpm.ToString("F0"), GUILayout.Width(32));
+                GUILayout.Label("bpm", GUILayout.Width(30));
+            }
             GUILayout.EndHorizontal();
 
             if (Settings.DebugTools && !k.Dead)
@@ -170,7 +227,7 @@ namespace SanteKerbal
                 if (GUILayout.Button("+20"))
                     ChangeHealth(k, +20, vessel);
                 if (GUILayout.Button("Tuer"))
-                    Mortality.Kill(k, "outil de test", vessel.vesselName);
+                    Mortality.Kill(k, "outil de test", vessel);
                 GUILayout.EndHorizontal();
             }
 
@@ -189,7 +246,16 @@ namespace SanteKerbal
                 k.Heal(delta);
             Log.Info($"[{vessel.vesselName}] Test : santé de {k.Name} -> {k.Health:F0}");
             if (k.Health <= 0)
-                Mortality.Kill(k, "outil de test", vessel.vesselName);
+                Mortality.Kill(k, "outil de test", vessel);
+        }
+
+        /// <summary>Vert phosphore d'un vrai moniteur, puis jaune et rouge quand ça va mal.</summary>
+        private static Color MonitorColor(KerbalHealth k)
+        {
+            if (k.Asleep) return new Color(0.45f, 0.75f, 1f);
+            if (k.Health > 50) return new Color(0.3f, 1f, 0.45f);
+            if (k.Health > 25) return new Color(1f, 0.85f, 0.2f);
+            return new Color(1f, 0.3f, 0.25f);
         }
 
         private static Color HealthColor(KerbalHealth k)

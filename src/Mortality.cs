@@ -9,10 +9,14 @@ namespace SanteKerbal
         // Durée d'inactivité « infinie » (secondes de jeu) : environ 30 000 ans
         private const double Forever = 1e12;
 
-        public static void Kill(KerbalHealth k, string cause, string vesselName)
+        /// <summary>Déclenché à chaque mort : nom du Kerbal, vaisseau (peut être null).</summary>
+        public static event System.Action<string, Vessel> Killed;
+
+        public static void Kill(KerbalHealth k, string cause, Vessel vessel)
         {
             if (k.Dead)
                 return;
+            string vesselName = vessel != null ? vessel.vesselName : "?";
             k.Health = 0;
             k.Dead = true;
             k.LackWater = k.LackFood = false;
@@ -21,6 +25,7 @@ namespace SanteKerbal
             ProtoCrewMember pcm = FindCrew(k.Name);
             if (pcm != null)
                 Incapacitate(pcm);
+            Killed?.Invoke(k.Name, vessel);
         }
 
         /// <summary>

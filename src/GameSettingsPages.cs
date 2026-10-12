@@ -155,6 +155,12 @@ namespace SanteKerbal
             toolTip = "Dépouille visible : on voit le corps.\nSignal perdu : portrait brouillé.\nSignal fantôme : brouillé, la dépouille apparaît par instants.")]
         public string deathView = DeathViews.Label(Settings.Defaults.DeathPortrait);
 
+        [GameParameters.CustomParameterUI("Moniteur cardiaque", toolTip = "Électrocardiogramme de chaque Kerbal dans la fenêtre de vol.")]
+        public bool monitor = true;
+
+        [GameParameters.CustomParameterUI("Sons du moniteur", toolTip = "Bip à chaque battement (fenêtre ouverte) et bip continu à la mort.")]
+        public bool monitorSound = true;
+
         [GameParameters.CustomParameterUI("Outils de test", toolTip = "Boutons -20 / +20 / Tuer dans la fenêtre, export des textures.")]
         public bool debugTools = Settings.Defaults.DebugTools;
 
@@ -169,6 +175,8 @@ namespace SanteKerbal
         {
             if (!SKSection.ModEnabled(parameters))
                 return false;
+            if (member.Name == nameof(monitorSound))
+                return monitor;
             return true;
         }
 
