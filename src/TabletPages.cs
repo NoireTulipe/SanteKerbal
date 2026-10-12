@@ -14,7 +14,8 @@ namespace SanteKerbal
         private void DrawPage(Rect area)
         {
             Vessel v = FlightGlobals.ActiveVessel;
-            scroll = GUILayout.BeginScrollView(scroll);
+            scroll = GUILayout.BeginScrollView(scroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar);
+            GUILayout.BeginVertical(GUILayout.Width(area.width - U(24)));
             if (!Settings.Enabled)
             {
                 GUILayout.Label("SantéKerbal est désactivé pour cette partie.");
@@ -40,6 +41,7 @@ namespace SanteKerbal
                     case Page.Power: DrawPowerPage(v); break;
                 }
             }
+            GUILayout.EndVertical();
             GUILayout.EndScrollView();
         }
 
@@ -107,8 +109,8 @@ namespace SanteKerbal
             {
                 KerbalHealth k = HealthScenario.Instance.Get(pcm);
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(k.Name, GUILayout.Width(150));
-                Rect bar = GUILayoutUtility.GetRect(150, 18, GUILayout.Width(150));
+                GUILayout.Label(k.Name, GUILayout.Width(U(150)));
+                Rect bar = GUILayoutUtility.GetRect(U(150), U(18), GUILayout.Width(U(150)));
                 DrawBar(bar, k.Dead ? 0f : (float)(k.Health / KerbalHealth.Max), HealthColor(k));
                 GUI.Label(bar, k.Dead ? "MORT" : k.Health.ToString("F0"), barLabel);
 
@@ -119,7 +121,7 @@ namespace SanteKerbal
 
                 if (m != null)
                 {
-                    Rect trace = GUILayoutUtility.GetRect(100, EcgHeight, GUILayout.ExpandWidth(true), GUILayout.Height(EcgHeight));
+                    Rect trace = GUILayoutUtility.GetRect(U(100), U(EcgHeight), GUILayout.ExpandWidth(true), GUILayout.Height(U(EcgHeight)));
                     m.Draw(trace, MonitorSystem.TraceColor(k), HeartMonitor.Samples);
                 }
 
@@ -130,13 +132,13 @@ namespace SanteKerbal
                 if (Settings.DebugTools && !k.Dead)
                 {
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label("   test :", GUILayout.Width(60));
+                    GUILayout.Label("   test :", GUILayout.Width(U(60)));
                     if (GUILayout.Button("-20", smallButton)) ChangeHealth(k, -20, v);
                     if (GUILayout.Button("+20", smallButton)) ChangeHealth(k, +20, v);
                     if (GUILayout.Button("Tuer", smallButton)) Mortality.Kill(k, "outil de test", v);
                     GUILayout.EndHorizontal();
                 }
-                GUILayout.Space(6);
+                GUILayout.Space(U(6));
             }
         }
 
@@ -215,21 +217,23 @@ namespace SanteKerbal
                     : k.Asleep ? "<color=#9fd0ff>Endormi</color>"
                     : k.Waking ? "<color=#9fd0ff>Se réveille</color>"
                     : "<color=#7fe08a>Éveillé</color>";
-                GUILayout.BeginHorizontal();
                 GUILayout.Label($"   {(where != null ? where.partInfo.title : "?")} - {state}", richLabel);
-                GUILayout.FlexibleSpace();
                 Hibernation.Action action = Hibernation.ActionFor(k, pcm, v);
-                if (action != Hibernation.Action.None
-                    && GUILayout.Button(Hibernation.Label(action), smallButton, GUILayout.Width(90)))
-                    Hibernation.Do(action, k, pcm, v);
-                GUILayout.EndHorizontal();
+                if (action != Hibernation.Action.None)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(U(16));
+                    if (GUILayout.Button(Hibernation.Label(action), smallButton, GUILayout.Width(U(110))))
+                        Hibernation.Do(action, k, pcm, v);
+                    GUILayout.EndHorizontal();
+                }
 
                 if (k.Waking)
                 {
                     double left = System.Math.Max(0, k.WakeUntil - Planetarium.GetUniversalTime());
                     GUILayout.Label($"<color=#9fd0ff>   Opérationnel dans {KSPUtil.PrintTimeCompact(left, false)}</color>", richLabel);
                 }
-                GUILayout.Space(4);
+                GUILayout.Space(U(4));
             }
 
             Part free = Hibernation.Available ? Hibernation.FreeCryoPart(v) : null;
@@ -252,11 +256,11 @@ namespace SanteKerbal
                 else awake++;
             }
             GUILayout.Label($"Bouches à nourrir : {awake}" + (sleepers > 0 ? $"  (+ {sleepers} en hibernation)" : ""));
-            GUILayout.Space(4);
+            GUILayout.Space(U(4));
             LifeResources.GetTotals(v, LifeResources.Water, out double water, out double waterMax);
             LifeResources.GetTotals(v, LifeResources.Food, out double food, out double foodMax);
-            SupplyPanel.Draw(water, waterMax, food, foodMax, awake, Equipment.FromParts(v.parts));
-            GUILayout.Space(4);
+            SupplyPanel.Draw(water, waterMax, food, foodMax, awake, Equipment.FromParts(v.parts), s);
+            GUILayout.Space(U(4));
             GUILayout.Label($"<color=#a0a0a0>Consommation : {Settings.WaterPerDay:F1} eau et {Settings.FoodPerDay:F1} nourriture par Kerbal et par jour.</color>", richLabel);
         }
 
@@ -289,7 +293,7 @@ namespace SanteKerbal
                 if (!k.Dead && !k.Asleep) eaters++;
             }
             double need = eaters * Settings.FoodPerDay;
-            GUILayout.Space(4);
+            GUILayout.Space(U(4));
             GUILayout.Label(produced >= need
                 ? $"<color=#7fe08a>Les serres nourrissent tout l'équipage ({produced:F1} / {need:F1} par jour).</color>"
                 : $"Les serres couvrent {produced:F1} des {need:F1} rations quotidiennes.", richLabel);
@@ -318,13 +322,13 @@ namespace SanteKerbal
             GUILayout.BeginHorizontal();
             GUILayout.Label($"<b>{part.partInfo.title}</b>", richLabel);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button(m.isActive ? "Arrêter" : "Démarrer", smallButton, GUILayout.Width(90)))
+            if (GUILayout.Button(m.isActive ? "Arrêter" : "Démarrer", smallButton, GUILayout.Width(U(90))))
                 m.Toggle();
             GUILayout.EndHorizontal();
             string color = !m.isActive ? "#a0a0a0" : m.status.StartsWith("Manque") ? "#ff8060" : "#7fe08a";
             GUILayout.Label($"   <color={color}>{(m.isActive ? m.status : "Arrêté")}</color>", richLabel);
             GUILayout.Label($"   <color=#a0a0a0>{specs}</color>", richLabel);
-            GUILayout.Space(4);
+            GUILayout.Space(U(4));
         }
 
         #endregion
@@ -343,11 +347,11 @@ namespace SanteKerbal
             GUILayout.Label($"<b>Batteries</b> : {amount:F0} / {capacity:F0} ({amount / capacity:P0})", richLabel);
             GUILayout.FlexibleSpace();
             for (int i = 0; i < PowerHistory.ScaleLabels.Length; i++)
-                if (GUILayout.Toggle(powerScale == i, PowerHistory.ScaleLabels[i], smallButton, GUILayout.Width(54)))
+                if (GUILayout.Toggle(powerScale == i, PowerHistory.ScaleLabels[i], smallButton, GUILayout.Width(U(54))))
                     powerScale = i;
             GUILayout.EndHorizontal();
 
-            Rect graph = GUILayoutUtility.GetRect(100, 90, GUILayout.ExpandWidth(true), GUILayout.Height(90));
+            Rect graph = GUILayoutUtility.GetRect(U(100), U(90), GUILayout.ExpandWidth(true), GUILayout.Height(U(90)));
             PowerHistory.Draw(graph, powerScale);
 
             string trend;

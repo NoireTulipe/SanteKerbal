@@ -28,11 +28,15 @@ namespace SanteKerbal
 
         private static readonly Page[] HomeIcons = { Page.Health, Page.Crew, Page.Stocks, Page.Greenhouse, Page.Recycler, Page.Power };
 
-        // Conservés pendant la session
+        // Conservés pendant la session ; taille et position aussi entre les sessions (PluginData)
         private static bool visible;
-        private static Vector2 position = new Vector2(120f, 80f);
-        private static float zoom = 1f;
+        private static Vector2 position = new Vector2(-1f, -1f);   // -1 = centrée en bas au premier affichage
+        private static float zoom = 1.3f;
+        private static bool prefsLoaded;
         private static Page page = Page.Home;
+
+        private static string PrefsPath =>
+            System.IO.Path.Combine(KSPUtil.ApplicationRootPath, "GameData/SanteKerbal/PluginData/tablette.cfg");
 
         private ApplicationLauncherButton button;
         private bool uiHidden;
@@ -55,6 +59,45 @@ namespace SanteKerbal
             if (ApplicationLauncher.Ready)
                 AddButton();
             LoadTextures();
+            LoadPrefs();
+        }
+
+        /// <summary>Taille et position de la tablette, gardées d'une partie à l'autre.</summary>
+        private static void LoadPrefs()
+        {
+            if (prefsLoaded)
+                return;
+            prefsLoaded = true;
+            try
+            {
+                if (!System.IO.File.Exists(PrefsPath))
+                    return;
+                ConfigNode node = ConfigNode.Load(PrefsPath);
+                node?.TryGetValue("zoom", ref zoom);
+                node?.TryGetValue("x", ref position.x);
+                node?.TryGetValue("y", ref position.y);
+            }
+            catch (System.Exception e)
+            {
+                Log.Warning("Préférences de la tablette illisibles : " + e.Message);
+            }
+        }
+
+        private static void SavePrefs()
+        {
+            try
+            {
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PrefsPath));
+                var node = new ConfigNode("TABLETTE");
+                node.AddValue("zoom", zoom);
+                node.AddValue("x", position.x);
+                node.AddValue("y", position.y);
+                node.Save(PrefsPath);
+            }
+            catch (System.Exception e)
+            {
+                Log.Warning("Préférences de la tablette non enregistrées : " + e.Message);
+            }
         }
 
         public void OnDestroy()
@@ -66,6 +109,7 @@ namespace SanteKerbal
             RemoveButton();
             SetLock(false);
             MonitorSystem.BeepEnabled = false;
+            SavePrefs();
         }
 
         private void OnHideUI() => uiHidden = true;
@@ -132,6 +176,7 @@ namespace SanteKerbal
 
         private void Close()
         {
+            SavePrefs();
             visible = false;
             if (button != null)
                 button.SetFalse(false);
@@ -162,6 +207,12 @@ namespace SanteKerbal
 
         private float Scale => GameSettings.UI_SCALE * zoom;
 
+        // Échelle de l'image en cours (tailles de base multipliées par s) et peau aux polices agrandies
+        private float s = 1f;
+        private float U(float v) => Mathf.Round(v * s);
+        private GUISkin scaledSkin;
+        private float skinScale = -1f;
+
         public void OnGUI()
         {
             if (!visible || uiHidden || HealthScenario.Instance == null || tabletTex == null)
@@ -169,33 +220,36 @@ namespace SanteKerbal
                 SetLock(false);
                 return;
             }
-            GUI.skin = HighLogic.Skin;
-            if (titleStyle == null)
+            // Tout est dessiné à sa taille réelle : dimensions et polices multipliées par s.
+            // (Agrandir le dessin avec GUI.matrix coupait le texte : mesuré à une taille, affiché à une autre.)
+            s = Scale;
+            if (Mathf.Abs(skinScale - s) > 0.001f)
                 CreateStyles();
+            GUI.skin = scaledSkin;
 
-            // Toute la tablette est dessinée à sa taille de base, puis agrandie par la matrice
-            float s = Scale;
-            Matrix4x4 oldMatrix = GUI.matrix;
-            GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(s, s, 1f));
+            float w = U(BaseWidth), h = U(BaseWidth * ImageH / ImageW);
+            if (position.x < 0 || position.y < 0)
+                position = new Vector2((Screen.width - w) / 2f, Screen.height - h - 10f);   // centrée en bas
+            // Toujours au moins en partie visible
+            position.x = Mathf.Clamp(position.x, 50f - w, Screen.width - 50f);
+            position.y = Mathf.Clamp(position.y, 0f, Screen.height - 50f);
 
-            float w = BaseWidth, h = BaseWidth * ImageH / ImageW;
-            var rect = new Rect(position.x / s, position.y / s, w, h);
+            var rect = new Rect(position.x, position.y, w, h);
             rect = GUI.Window(WindowId, rect, DrawTablet, GUIContent.none, GUIStyle.none);
-            position = new Vector2(rect.x * s, rect.y * s);
+            position = new Vector2(rect.x, rect.y);
 
             SetLock(rect.Contains(Event.current.mousePosition));
-            GUI.matrix = oldMatrix;
         }
 
         private void DrawTablet(int id)
         {
-            float w = BaseWidth, h = BaseWidth * ImageH / ImageW, k = w / ImageW;
+            float w = U(BaseWidth), h = U(BaseWidth * ImageH / ImageW), k = w / ImageW;
             GUI.DrawTexture(new Rect(0, 0, w, h), tabletTex);
 
             var screen = new Rect(ScreenInImage.x * k, ScreenInImage.y * k, ScreenInImage.width * k, ScreenInImage.height * k);
             GUILayout.BeginArea(screen);
             DrawTopBar(screen.width);
-            var content = new Rect(0, TopBarHeight, screen.width, screen.height - TopBarHeight);
+            var content = new Rect(0, U(TopBarHeight), screen.width, screen.height - U(TopBarHeight));
             GUILayout.BeginArea(content);
             if (page == Page.Home)
                 DrawHome(content);
@@ -215,13 +269,14 @@ namespace SanteKerbal
         {
             Color old = GUI.color;
             GUI.color = new Color(1f, 1f, 1f, 0.06f);
-            GUI.DrawTexture(new Rect(0, 0, width, TopBarHeight), Texture2D.whiteTexture);
+            float bar = U(TopBarHeight);
+            GUI.DrawTexture(new Rect(0, 0, width, bar), Texture2D.whiteTexture);
             GUI.color = old;
 
-            GUILayout.BeginHorizontal(GUILayout.Height(TopBarHeight));
+            GUILayout.BeginHorizontal(GUILayout.Height(bar));
             if (page != Page.Home)
             {
-                if (GUILayout.Button("<", smallButton, GUILayout.Width(30), GUILayout.Height(TopBarHeight - 4)))
+                if (GUILayout.Button("<", smallButton, GUILayout.Width(U(30)), GUILayout.Height(bar - U(4))))
                 {
                     page = Page.Home;
                     scroll = Vector2.zero;
@@ -229,14 +284,14 @@ namespace SanteKerbal
             }
             Vessel v = FlightGlobals.ActiveVessel;
             string title = page == Page.Home ? (v != null ? v.vesselName : "SantéKerbal") : PageTitle(page);
-            GUILayout.Label(title, titleStyle, GUILayout.Height(TopBarHeight - 2));
+            GUILayout.Label(title, titleStyle, GUILayout.Height(bar - U(2)));
             GUILayout.FlexibleSpace();
-            GUILayout.Label(KSPUtil.PrintDateCompact(Planetarium.GetUniversalTime(), true), clockStyle, GUILayout.Height(TopBarHeight - 2));
-            if (GUILayout.Button("-", smallButton, GUILayout.Width(24), GUILayout.Height(TopBarHeight - 4)))
+            GUILayout.Label(KSPUtil.PrintDateCompact(Planetarium.GetUniversalTime(), true), clockStyle, GUILayout.Height(bar - U(2)));
+            if (GUILayout.Button("-", smallButton, GUILayout.Width(U(24)), GUILayout.Height(bar - U(4))))
                 zoom = Mathf.Max(0.6f, zoom - 0.1f);
-            if (GUILayout.Button("+", smallButton, GUILayout.Width(24), GUILayout.Height(TopBarHeight - 4)))
+            if (GUILayout.Button("+", smallButton, GUILayout.Width(U(24)), GUILayout.Height(bar - U(4))))
                 zoom = Mathf.Min(1.6f, zoom + 0.1f);
-            if (GUILayout.Button("X", smallButton, GUILayout.Width(24), GUILayout.Height(TopBarHeight - 4)))
+            if (GUILayout.Button("X", smallButton, GUILayout.Width(U(24)), GUILayout.Height(bar - U(4))))
                 Close();
             GUILayout.EndHorizontal();
         }
@@ -260,16 +315,16 @@ namespace SanteKerbal
         {
             const int cols = 3, rows = 2;
             float cellW = area.width / cols, cellH = area.height / rows;
-            float icon = Mathf.Min(cellW, cellH - 22f) * 0.72f;
+            float icon = Mathf.Min(cellW, cellH - U(22)) * 0.72f;
             Vessel v = FlightGlobals.ActiveVessel;
 
             for (int i = 0; i < HomeIcons.Length; i++)
             {
                 Page p = HomeIcons[i];
                 float cx = (i % cols) * cellW, cy = (i / cols) * cellH;
-                var iconRect = new Rect(cx + (cellW - icon) / 2f, cy + (cellH - icon - 20f) / 2f, icon, icon);
-                var labelRect = new Rect(cx, iconRect.yMax + 2f, cellW, 18f);
-                var hit = new Rect(cx + 4f, cy + 4f, cellW - 8f, cellH - 8f);
+                var iconRect = new Rect(cx + (cellW - icon) / 2f, cy + (cellH - icon - U(20)) / 2f, icon, icon);
+                var labelRect = new Rect(cx, iconRect.yMax + U(2), cellW, U(20));
+                var hit = new Rect(cx + U(4), cy + U(4), cellW - U(8), cellH - U(8));
 
                 if (hit.Contains(Event.current.mousePosition))
                 {
@@ -299,16 +354,31 @@ namespace SanteKerbal
             }
         }
 
+        /// <summary>
+        /// Copie de la peau de KSP avec des polices et des barres de défilement à l'échelle s,
+        /// et nos propres styles. Recréée quand l'échelle change.
+        /// </summary>
         private void CreateStyles()
         {
-            GUISkin skin = HighLogic.Skin;
-            titleStyle = new GUIStyle(skin.label) { fontStyle = FontStyle.Bold, fontSize = 14, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.85f, 0.95f, 1f) } };
-            clockStyle = new GUIStyle(skin.label) { fontSize = 11, alignment = TextAnchor.MiddleRight, normal = { textColor = new Color(0.6f, 0.8f, 0.7f) } };
-            iconLabelStyle = new GUIStyle(skin.label) { fontSize = 12, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter, normal = { textColor = new Color(0.9f, 0.9f, 0.9f) } };
-            smallButton = new GUIStyle(skin.button) { fontSize = 12, padding = new RectOffset(2, 2, 1, 1) };
+            skinScale = s;
+            if (scaledSkin != null)
+                Destroy(scaledSkin);
+            scaledSkin = Instantiate(HighLogic.Skin);
+            int Font(GUIStyle st) => Mathf.Max(8, Mathf.RoundToInt((st.fontSize > 0 ? st.fontSize : 13) * s));
+            foreach (GUIStyle st in new[] { scaledSkin.label, scaledSkin.button, scaledSkin.toggle, scaledSkin.box, scaledSkin.textField })
+                st.fontSize = Font(st);
+            scaledSkin.label.wordWrap = true;
+            foreach (GUIStyle st in new[] { scaledSkin.verticalScrollbar, scaledSkin.verticalScrollbarThumb })
+                if (st.fixedWidth > 0) st.fixedWidth = Mathf.Round(st.fixedWidth * s);
+
+            GUISkin skin = scaledSkin;
+            titleStyle = new GUIStyle(skin.label) { fontStyle = FontStyle.Bold, fontSize = (int)U(14), wordWrap = false, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(0.85f, 0.95f, 1f) } };
+            clockStyle = new GUIStyle(skin.label) { fontSize = (int)U(11), wordWrap = false, alignment = TextAnchor.MiddleRight, normal = { textColor = new Color(0.6f, 0.8f, 0.7f) } };
+            iconLabelStyle = new GUIStyle(skin.label) { fontSize = (int)U(12), wordWrap = false, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter, normal = { textColor = new Color(0.9f, 0.9f, 0.9f) } };
+            smallButton = new GUIStyle(skin.button) { fontSize = (int)U(12), wordWrap = false, padding = new RectOffset((int)U(4), (int)U(4), (int)U(2), (int)U(2)) };
             richLabel = new GUIStyle(skin.label) { richText = true };
-            barLabel = new GUIStyle(skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold, normal = { textColor = Color.white } };
-            bpmLabel = new GUIStyle(skin.label) { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Bold };
+            barLabel = new GUIStyle(skin.label) { alignment = TextAnchor.MiddleCenter, wordWrap = false, fontStyle = FontStyle.Bold, normal = { textColor = Color.white } };
+            bpmLabel = new GUIStyle(skin.label) { alignment = TextAnchor.MiddleRight, wordWrap = false, fontStyle = FontStyle.Bold };
             sectionStyle = new GUIStyle(skin.label) { richText = true, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.85f, 0.95f, 1f) } };
         }
 
