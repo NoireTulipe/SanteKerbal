@@ -20,9 +20,13 @@ namespace SanteKerbal
         private readonly List<Texture2D> skinTextures = new List<Texture2D>();
         private int appliedLevel;
 
-        // Globes oculaires : objets séparés devant le visage, masqués chez les morts
-        // pour laisser voir les orbites de la texture « mort »
+        // Globes oculaires : objets séparés devant le visage. KSP réactive leur rendu avant chaque
+        // image du portrait (Kerbal.IVADisable) : chez les morts, on les peint donc en noir pour
+        // qu'ils se fondent dans les orbites de la texture « mort ».
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
         private readonly Renderer[] eyes;
+        private readonly List<Material> eyeMaterials = new List<Material>();
+        private readonly List<Color> eyeColors = new List<Color>();
         private bool eyesHidden;
 
         // Rotation de tête : on retient ce qu'on a écrit pour ne pas cumuler l'inclinaison
@@ -40,6 +44,13 @@ namespace SanteKerbal
             eyes = kerbal.GetComponentsInChildren<Renderer>(true)
                 .Where(r => r.name.ToLowerInvariant().Contains("eye") || r.name.ToLowerInvariant().Contains("pupil"))
                 .ToArray();
+            foreach (Renderer r in eyes)
+                foreach (Material m in r.materials)
+                    if (m != null && m.HasProperty(ColorId))
+                    {
+                        eyeMaterials.Add(m);
+                        eyeColors.Add(m.GetColor(ColorId));
+                    }
             LogDiagnostics();
         }
 
@@ -53,11 +64,16 @@ namespace SanteKerbal
             else
                 amount = Mathf.Clamp01((float)((Settings.VisualStartHealth - k.Health) / Settings.VisualStartHealth));
 
-            // Animations : ralenties, figées à la mort
-            float speed = k.Dead ? 0f : Mathf.Lerp(1f, Settings.MinAnimationSpeed, amount);
+            // Animations : ralenties ; à la mort, l'Animator est coupé et le squelette reste figé
+            float speed = Mathf.Lerp(1f, Settings.MinAnimationSpeed, amount);
             foreach (Animator a in animators)
-                if (a != null)
-                    a.speed = speed;
+            {
+                if (a == null)
+                    continue;
+                if (a.enabled == k.Dead)
+                    a.enabled = !k.Dead;
+                a.speed = speed;
+            }
 
             // Teint : pâlit par paliers, gris à la mort
             int level = k.Dead ? PaleTextures.DeadLevel : Mathf.CeilToInt(amount * PaleTextures.AliveLevels);
@@ -68,9 +84,9 @@ namespace SanteKerbal
             bool hideEyes = k.Dead && Settings.HideEyesWhenDead;
             if (hideEyes != eyesHidden)
             {
-                foreach (Renderer r in eyes)
-                    if (r != null)
-                        r.enabled = !hideEyes;
+                for (int i = 0; i < eyeMaterials.Count; i++)
+                    if (eyeMaterials[i] != null)
+                        eyeMaterials[i].SetColor(ColorId, hideEyes ? Color.black : eyeColors[i]);
                 eyesHidden = hideEyes;
             }
 
@@ -153,7 +169,7 @@ namespace SanteKerbal
             string textures = string.Join(", ", skinTextures.Where(t => t != null).Select(t => t.name).Distinct());
             Log.Info($"Modèle IVA de {name} : os penché='{headPath}', animators={animators.Length}, " +
                      $"textures de peau={skinMaterials.Count} ({textures}), " +
-                     $"yeux={eyes.Length} ({string.Join(", ", eyes.Select(r => r.name))})");
+                     $"yeux={eyes.Length} ({string.Join(", ", eyes.Select(r => r.name))}, {eyeMaterials.Count} matériaux)");
         }
 
         private static string PathOf(Transform t, Transform root)
