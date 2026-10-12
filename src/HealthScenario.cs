@@ -242,8 +242,8 @@ namespace SanteKerbal
             // Électricité : production estimée, consommation des équipements et des caissons, batteries
             double production = PowerSim.UnloadedProduction(v, out double solar, out double generators);
             double needPerSecond = eq.EcPerSecond + sleepers.Count * Settings.CryoEcPerSecond;
-            store.UnloadedEcFraction = PowerSim.Resolve(store, needPerSecond, production, dt);
-            LastPower[v.id] = new PowerReport(production, solar, generators, needPerSecond, store.UnloadedEcFraction);
+            store.EcFraction = PowerSim.Resolve(store, needPerSecond, production, dt);
+            LastPower[v.id] = new PowerReport(production, solar, generators, needPerSecond, store.EcFraction);
 
             Hibernation.Tick(store, sleepers, dt, v);
             NeedsResult r = LifeSupportSim.Consume(store, alive.Count, eq, dt);
@@ -259,7 +259,7 @@ namespace SanteKerbal
                 Log.Info($"[{v.vesselName}] (non chargé) dt={dt:F0}s eau={store.Amount(LifeResources.Water):F2} ({r.WaterFrac:P0}) " +
                          $"nourriture={store.Amount(LifeResources.Food):F2} ({r.FoodFrac:P0}) " +
                          $"élec={store.Amount(LifeSupportSim.ElectricCharge):F1} (+{production:F2}/s dont solaire {solar:F2} RTG {generators:F2}, " +
-                         $"-{needPerSecond:F2}/s, couvert {store.UnloadedEcFraction:P0}) | " +
+                         $"-{needPerSecond:F2}/s, couvert {store.EcFraction:P0}) | " +
                          string.Join(", ", alive.Select(k => k.ToString())));
             }
         }

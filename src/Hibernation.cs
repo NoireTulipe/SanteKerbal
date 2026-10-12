@@ -206,12 +206,8 @@ namespace SanteKerbal
         {
             if (sleepers.Count == 0)
                 return;
-            double need = sleepers.Count * Settings.CryoEcPerSecond * dt;
-            double frac;
-            if (store.IsLoaded)
-                frac = need > 0 ? System.Math.Min(1.0, store.Take(LifeSupportSim.ElectricCharge, need) / need) : 1;
-            else
-                frac = store.UnloadedEcFraction;
+            // Électricité déjà résolue par PowerSim pour tout le vaisseau (caissons et équipements)
+            double frac = store.EcFraction;
 
             double days = dt / KSPUtil.dateTimeFormatter.Day;
             double damage = (1.0 - frac) * Settings.CryoUnpoweredDamagePerDay * days;
@@ -220,9 +216,12 @@ namespace SanteKerbal
             {
                 // LackWater sert ici de mémoire « caisson sans courant » pour n'annoncer qu'au changement
                 if (unpowered != k.LackWater)
-                    HealthEvents.Announce(vessel, unpowered
-                        ? $"Caisson de {k.Name} : panne d'électricité !"
-                        : $"Caisson de {k.Name} : électricité rétablie.");
+                {
+                    if (unpowered)
+                        HealthEvents.Alert(vessel, $"Caisson de {k.Name} : panne d'électricité !");
+                    else
+                        HealthEvents.Announce(vessel, $"Caisson de {k.Name} : électricité rétablie.");
+                }
                 k.LackWater = unpowered;
 
                 double before = k.Health;

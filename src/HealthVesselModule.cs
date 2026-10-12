@@ -144,6 +144,8 @@ namespace SanteKerbal
                 return;
 
             var store = new LoadedStore(vessel);
+            double needPerSecond = eq.EcPerSecond + sleepers.Count * Settings.CryoEcPerSecond;
+            store.EcFraction = PowerSim.ResolveLoaded(store, vessel.id, needPerSecond, dt);
             Hibernation.Tick(store, sleepers, dt, vessel);
             NeedsResult r = LifeSupportSim.Consume(store, alive.Count, eq, dt);
             UpdateEquipmentStatus(eq, r, alive.Count, dt);

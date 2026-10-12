@@ -58,6 +58,11 @@ namespace SanteKerbal
         // Électricité des vaisseaux non chargés : rendement moyen des panneaux solaires orientables
         // (ombre de la planète comprise) ; les panneaux fixes produisent la moitié
         public static double UnloadedSolarFactor = 0.6;
+
+        // Tolérance avant de déclarer une panne d'électricité (minutes de consommation de survie)
+        public static double PowerGraceMinutes = 60;
+        // Arrêter l'accélération du temps lors d'une alerte (panne, manque, santé critique, mort)
+        public static bool StopWarpOnAlert = true;
         public static bool VisualDecline = true;
         public static bool Monitor = true;       // moniteur cardiaque dans la fenêtre
         public static bool MonitorSound = true;  // bips du moniteur et bip continu de la mort
@@ -161,6 +166,8 @@ namespace SanteKerbal
             n.TryGetValue("cryoWakeDamage", ref CryoWakeDamage);
             n.TryGetValue("cryoUnpoweredDamagePerDay", ref CryoUnpoweredDamagePerDay);
             n.TryGetValue("unloadedSolarFactor", ref UnloadedSolarFactor);
+            n.TryGetValue("powerGraceMinutes", ref PowerGraceMinutes);
+            n.TryGetValue("stopWarpOnAlert", ref StopWarpOnAlert);
             n.TryGetValue("debugLogInterval", ref DebugLogInterval);
             n.TryGetValue("debugTools", ref DebugTools);
 

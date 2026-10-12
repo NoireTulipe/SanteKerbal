@@ -50,6 +50,42 @@ namespace SanteKerbal
             return need > 0 ? Math.Min(1.0, (produced + fromBatteries) / need) : 1.0;
         }
 
+        // Dette d'électricité des vaisseaux chargés, par vaisseau (non sauvegardée)
+        private static readonly System.Collections.Generic.Dictionary<Guid, double> debts =
+            new System.Collections.Generic.Dictionary<Guid, double>();
+
+        /// <summary>
+        /// Vaisseau chargé : prélève la consommation de survie dans les batteries, avec une réserve de
+        /// tolérance. En accélération du temps, chaque image demande d'un coup beaucoup d'électricité,
+        /// parfois plus que les batteries n'en contiennent à cet instant, alors que les panneaux les
+        /// rechargent à l'image suivante. Le manque est donc noté comme une dette, remboursée ensuite ;
+        /// la panne n'est déclarée que si la dette dépasse powerGraceMinutes de consommation.
+        /// </summary>
+        public static double ResolveLoaded(IVesselStore store, Guid vesselId, double needPerSecond, double dt)
+        {
+            debts.TryGetValue(vesselId, out double debt);
+            if (needPerSecond <= 0)
+            {
+                debts[vesselId] = 0;
+                return 1.0;
+            }
+            double need = needPerSecond * dt;
+            double ask = need + debt;
+            double got = store.Take(LifeSupportSim.ElectricCharge, ask);
+            debt = ask - got;
+
+            double maxDebt = needPerSecond * Settings.PowerGraceMinutes * 60.0;
+            double frac = 1.0;
+            if (debt > maxDebt)
+            {
+                // Vraie pénurie : la part au-delà de la tolérance n'est pas couverte
+                frac = Math.Max(0.0, 1.0 - (debt - maxDebt) / need);
+                debt = maxDebt;
+            }
+            debts[vesselId] = debt;
+            return frac;
+        }
+
         private static double SolarPanel(Part prefab, ProtoPartModuleSnapshot ms, double sunMult)
         {
             ModuleDeployableSolarPanel panel = prefab.FindModuleImplementing<ModuleDeployableSolarPanel>();

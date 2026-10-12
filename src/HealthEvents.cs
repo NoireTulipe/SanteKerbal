@@ -14,12 +14,29 @@ namespace SanteKerbal
             ScreenMessages.PostScreenMessage(shown, 5f, ScreenMessageStyle.UPPER_CENTER);
         }
 
+        /// <summary>Annonce importante : arrête aussi l'accélération du temps (réglage stopWarpOnAlert).</summary>
+        public static void Alert(Vessel vessel, string message)
+        {
+            Announce(vessel, message);
+            if (Settings.StopWarpOnAlert && TimeWarp.CurrentRateIndex > 0)
+            {
+                TimeWarp.SetRate(0, false);
+                Log.Info("Accélération du temps arrêtée : " + message);
+            }
+        }
+
         public static void NeedsChanged(Vessel vessel, KerbalHealth k, bool lackWater, bool lackFood)
         {
             if (lackWater != k.LackWater)
-                Announce(vessel, lackWater ? $"{k.Name} n'a plus d'eau !" : $"{k.Name} a de nouveau de l'eau.");
+            {
+                if (lackWater) Alert(vessel, $"{k.Name} n'a plus d'eau !");
+                else Announce(vessel, $"{k.Name} a de nouveau de l'eau.");
+            }
             if (lackFood != k.LackFood)
-                Announce(vessel, lackFood ? $"{k.Name} n'a plus de nourriture !" : $"{k.Name} a de nouveau à manger.");
+            {
+                if (lackFood) Alert(vessel, $"{k.Name} n'a plus de nourriture !");
+                else Announce(vessel, $"{k.Name} a de nouveau à manger.");
+            }
         }
 
         /// <summary>Annonce le passage des seuils de santé, et tue le Kerbal à 0.</summary>
@@ -30,14 +47,16 @@ namespace SanteKerbal
             if (k.Health <= 0)
             {
                 Mortality.Kill(k, cause, vessel);
-                Announce(vessel, $"{k.Name} est mort ({cause}).");
+                Alert(vessel, $"{k.Name} est mort ({cause}).");
                 return;
             }
             foreach (double threshold in Thresholds)
             {
                 if (before > threshold && k.Health <= threshold)
                 {
-                    Announce(vessel, $"Santé de {k.Name} : {threshold:F0} % ({cause})");
+                    // Seuils critiques : on arrête aussi l'accélération du temps
+                    if (threshold <= 25) Alert(vessel, $"Santé de {k.Name} : {threshold:F0} % ({cause})");
+                    else Announce(vessel, $"Santé de {k.Name} : {threshold:F0} % ({cause})");
                     break;
                 }
             }
