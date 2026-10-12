@@ -8,11 +8,12 @@ namespace SanteKerbal
     /// </summary>
     internal class HeartMonitor
     {
-        public const int Width = 140;          // largeur du tracé, en pixels (= nombre d'échantillons)
-        public const int Height = 26;
+        public const int Samples = 320;        // historique du tracé, en échantillons (1 échantillon = 1 pixel de défilement)
+        public const int PortraitSamples = 140; // les plus récents, pour le petit tracé des portraits
+        public const float WindowHeight = 54f;  // hauteur du grand tracé de la fenêtre
         private const float ScrollSpeed = 70f; // pixels par seconde
 
-        private readonly float[] trace = new float[Width];
+        private readonly float[] trace = new float[Samples];
         private int head;                      // prochain échantillon écrit (tampon circulaire)
         private float pending;                 // fraction de pixel restant à avancer
         private float phase;                   // position dans le battement en cours (0..1)
@@ -73,7 +74,7 @@ namespace SanteKerbal
                     value += (Mathf.PerlinNoise(Time.time * 3f, noiseSeed) - 0.5f) * 0.05f;
                 }
                 trace[head] = value;
-                head = (head + 1) % Width;
+                head = (head + 1) % Samples;
             }
             return beat;
         }
@@ -107,9 +108,13 @@ namespace SanteKerbal
             return Mathf.Exp(-d * d);
         }
 
-        /// <summary>Dessine le tracé dans rect (à appeler pendant OnGUI).</summary>
-        public void Draw(Rect rect, Color color)
+        /// <summary>
+        /// Dessine les <paramref name="count"/> échantillons les plus récents dans rect
+        /// (à appeler pendant OnGUI). Le plus récent est à droite.
+        /// </summary>
+        public void Draw(Rect rect, Color color, int count)
         {
+            count = Mathf.Clamp(count, 2, Samples);
             Color old = GUI.color;
             GUI.color = new Color(0.02f, 0.06f, 0.03f, 0.95f);
             GUI.DrawTexture(rect, Texture2D.whiteTexture);
@@ -117,12 +122,12 @@ namespace SanteKerbal
             GUI.color = color;
             float mid = rect.y + rect.height * 0.62f;
             float amp = rect.height * 0.55f;
-            float xScale = rect.width / Width;
+            float xScale = rect.width / count;
+            int start = head + Samples - count;
             float prevY = mid;
-            for (int i = 0; i < Width; i++)
+            for (int i = 0; i < count; i++)
             {
-                // Le plus ancien à gauche, le plus récent à droite
-                float y = mid - trace[(head + i) % Width] * amp;
+                float y = mid - trace[(start + i) % Samples] * amp;
                 float top = Mathf.Min(prevY, y);
                 float h = Mathf.Max(1.5f, Mathf.Abs(prevY - y) + 1f);
                 GUI.DrawTexture(new Rect(rect.x + i * xScale, top, Mathf.Max(1f, xScale), h), Texture2D.whiteTexture);

@@ -71,7 +71,7 @@ namespace SanteKerbal
                 var rect = new Rect(img.x, img.y - h - Gap * scale, img.width, h);
 
                 KerbalHealth k = HealthScenario.Instance.Get(portrait.crewPcm);
-                m.Draw(rect, MonitorSystem.TraceColor(k));
+                m.Draw(rect, MonitorSystem.TraceColor(k), HeartMonitor.PortraitSamples);
                 GUI.Label(rect, k.Dead ? "0" : m.Bpm.ToString("F0"), bpmStyle);
             }
         }

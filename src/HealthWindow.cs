@@ -14,8 +14,8 @@ namespace SanteKerbal
         private const int WindowId = 0x5A17E;
 
         // Conservés d'une scène de vol à l'autre pendant la session
-        private static Rect windowRect = new Rect(200, 120, 500, 0);
-        private const float WindowWidth = 500f;
+        private static Rect windowRect = new Rect(200, 120, 440, 0);
+        private const float WindowWidth = 440f;
         private static bool visible;
 
         private ApplicationLauncherButton button;
@@ -23,6 +23,7 @@ namespace SanteKerbal
 
         private GUIStyle barLabelStyle;
         private GUIStyle richLabelStyle;
+        private GUIStyle bpmStyle;
 
         public void Start()
         {
@@ -96,6 +97,7 @@ namespace SanteKerbal
                     normal = { textColor = Color.white }
                 };
                 richLabelStyle = new GUIStyle(GUI.skin.label) { richText = true };
+                bpmStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Bold };
             }
             windowRect = GUILayout.Window(WindowId, windowRect, DrawWindow, "SantéKerbal", GUILayout.Width(WindowWidth));
         }
@@ -163,21 +165,25 @@ namespace SanteKerbal
             GUILayout.BeginHorizontal();
             GUILayout.Label(k.Name, GUILayout.Width(150));
 
-            Rect bar = GUILayoutUtility.GetRect(110, 18, GUILayout.Width(110));
+            Rect bar = GUILayoutUtility.GetRect(180, 18, GUILayout.Width(180));
             DrawBar(bar, k.Dead ? 0f : (float)(k.Health / KerbalHealth.Max), HealthColor(k));
             GUI.Label(bar, k.Dead ? "MORT" : k.Health.ToString("F0"), barLabelStyle);
 
             HeartMonitor m = Settings.Monitor ? MonitorSystem.Get(k.Name) : null;
             if (m != null)
             {
-                GUILayout.Space(6);
-                Rect trace = GUILayoutUtility.GetRect(HeartMonitor.Width, HeartMonitor.Height,
-                    GUILayout.Width(HeartMonitor.Width), GUILayout.Height(HeartMonitor.Height));
-                m.Draw(trace, MonitorSystem.TraceColor(k));
-                GUILayout.Label(k.Dead ? "0" : m.Bpm.ToString("F0"), GUILayout.Width(32));
-                GUILayout.Label("bpm", GUILayout.Width(30));
+                GUILayout.Label((k.Dead ? "0" : m.Bpm.ToString("F0")) + " bpm", bpmStyle);
             }
             GUILayout.EndHorizontal();
+
+            // Grand électrocardiogramme sur toute la largeur de la fenêtre
+            if (m != null)
+            {
+                Rect trace = GUILayoutUtility.GetRect(100, HeartMonitor.WindowHeight,
+                    GUILayout.ExpandWidth(true), GUILayout.Height(HeartMonitor.WindowHeight));
+                m.Draw(trace, MonitorSystem.TraceColor(k), HeartMonitor.Samples);
+                GUILayout.Space(4);
+            }
 
             if (Settings.DebugTools && !k.Dead)
             {
