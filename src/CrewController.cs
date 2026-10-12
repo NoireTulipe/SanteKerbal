@@ -47,7 +47,7 @@ namespace SanteKerbal
                 foreach (ProtoCrewMember pcm in v.GetVesselCrew())
                 {
                     KerbalHealth k = HealthScenario.Instance.Get(pcm);
-                    if (k.Dead)
+                    if (k.Incapacitated)
                         Mortality.Incapacitate(pcm);
 
                     Kerbal kerbal = pcm.KerbalRef;
@@ -94,11 +94,15 @@ namespace SanteKerbal
             float now = Time.time;
             foreach (KerbalPortrait portrait in gallery.Portraits)
             {
-                if (portrait == null || portrait.crewPcm == null || !Mortality.IsDead(portrait.crewPcm))
+                if (portrait == null || portrait.crewPcm == null || !Mortality.IsIncapacitated(portrait.crewPcm))
                     continue;
 
                 bool show;
-                if (Settings.DeathPortrait == DeathView.Body)
+                if (!Mortality.IsDead(portrait.crewPcm))
+                {
+                    show = true;   // dormeur ou réveil en cours : on le voit (KSP brouillerait un Kerbal inactif)
+                }
+                else if (Settings.DeathPortrait == DeathView.Body)
                 {
                     show = true;
                 }
@@ -129,7 +133,7 @@ namespace SanteKerbal
             CameraManager cam = CameraManager.Instance;
             Vessel v = FlightGlobals.ActiveVessel;
             if (cam == null || v == null || cam.currentCameraMode != CameraManager.CameraMode.IVA
-                || cam.IVACameraActiveKerbal == null || !Mortality.IsDead(cam.IVACameraActiveKerbal.protoCrewMember))
+                || cam.IVACameraActiveKerbal == null || !Mortality.IsIncapacitated(cam.IVACameraActiveKerbal.protoCrewMember))
             {
                 ivaSkips = 0;
                 return;
@@ -137,14 +141,14 @@ namespace SanteKerbal
 
             bool anyAlive = false;
             foreach (ProtoCrewMember pcm in v.GetVesselCrew())
-                if (!Mortality.IsDead(pcm) && pcm.KerbalRef != null)
+                if (!Mortality.IsIncapacitated(pcm) && pcm.KerbalRef != null)
                     anyAlive = true;
 
             if (!anyAlive || ivaSkips >= v.GetCrewCount())
             {
                 ivaSkips = 0;
                 cam.SetCameraFlight();
-                ScreenMessages.PostScreenMessage("Plus personne de vivant à bord : pas de vue intérieure.", 4f, ScreenMessageStyle.UPPER_CENTER);
+                ScreenMessages.PostScreenMessage("Personne d'éveillé à bord : pas de vue intérieure.", 4f, ScreenMessageStyle.UPPER_CENTER);
                 return;
             }
             ivaSkips++;
@@ -153,26 +157,32 @@ namespace SanteKerbal
 
         private void OnAttemptEva(ProtoCrewMember pcm, Part part, Transform hatch)
         {
-            if (!Mortality.IsDead(pcm))
+            if (!Mortality.IsIncapacitated(pcm))
                 return;
             FlightEVA.fetch.overrideEVA = true;
-            ScreenMessages.PostScreenMessage($"{pcm.name} est mort : il ne peut pas sortir.", 4f, ScreenMessageStyle.UPPER_CENTER);
+            ScreenMessages.PostScreenMessage($"{pcm.name} {StateText(pcm)} : il ne peut pas sortir.", 4f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         private void OnAttemptTransfer(ProtoCrewMember pcm, Part part, CrewHatchController hatch)
         {
-            if (!Mortality.IsDead(pcm))
+            if (!Mortality.IsIncapacitated(pcm))
                 return;
             hatch.overrideTransfer = true;
-            ScreenMessages.PostScreenMessage($"{pcm.name} est mort : il ne peut pas être transféré.", 4f, ScreenMessageStyle.UPPER_CENTER);
+            ScreenMessages.PostScreenMessage($"{pcm.name} {StateText(pcm)} : il ne peut pas être transféré.", 4f, ScreenMessageStyle.UPPER_CENTER);
         }
 
         private void OnCrewTransferSelected(CrewTransfer.CrewTransferData data)
         {
-            if (!Mortality.IsDead(data.crewMember))
+            if (!Mortality.IsIncapacitated(data.crewMember))
                 return;
             data.canTransfer = false;
-            ScreenMessages.PostScreenMessage($"{data.crewMember.name} est mort : il ne peut pas être transféré.", 4f, ScreenMessageStyle.UPPER_CENTER);
+            ScreenMessages.PostScreenMessage($"{data.crewMember.name} {StateText(data.crewMember)} : il ne peut pas être transféré.", 4f, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        private static string StateText(ProtoCrewMember pcm)
+        {
+            KerbalHealth k = HealthScenario.Instance.Get(pcm);
+            return k.Dead ? "est mort" : k.Asleep ? "est en hibernation" : "se réveille";
         }
     }
 }

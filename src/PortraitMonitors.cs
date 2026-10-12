@@ -14,6 +14,7 @@ namespace SanteKerbal
     {
         private const float TraceHeight = 22f;   // hauteur du tracé, en pixels à l'échelle 100 %
         private const float Gap = 2f;
+        private const float LabelHeight = 16f;   // ligne du pouls, au-dessus du tracé
 
         private readonly Vector3[] corners = new Vector3[4];
         private bool uiHidden;
@@ -47,8 +48,8 @@ namespace SanteKerbal
             {
                 bpmStyle = new GUIStyle(HighLogic.Skin.label)
                 {
-                    alignment = TextAnchor.MiddleRight,
-                    fontSize = 11,
+                    alignment = TextAnchor.LowerRight,
+                    fontSize = Mathf.RoundToInt(12 * GameSettings.UI_SCALE),
                     fontStyle = FontStyle.Bold,
                     normal = { textColor = Color.white },
                     padding = new RectOffset(0, 3, 0, 0)
@@ -72,7 +73,15 @@ namespace SanteKerbal
 
                 KerbalHealth k = HealthScenario.Instance.Get(portrait.crewPcm);
                 m.Draw(rect, MonitorSystem.TraceColor(k), HeartMonitor.PortraitSamples);
-                GUI.Label(rect, k.Dead ? "0" : m.Bpm.ToString("F0"), bpmStyle);
+
+                // Pouls au-dessus du tracé, avec une ombre pour rester lisible sur le décor
+                float lh = LabelHeight * scale;
+                var label = new Rect(rect.x, rect.y - lh, rect.width, lh);
+                string text = (k.Dead ? "0" : m.Bpm.ToString("F0")) + " BPM";
+                bpmStyle.normal.textColor = new Color(0f, 0f, 0f, 0.8f);
+                GUI.Label(new Rect(label.x + 1, label.y + 1, label.width, label.height), text, bpmStyle);
+                bpmStyle.normal.textColor = MonitorSystem.TraceColor(k);
+                GUI.Label(label, text, bpmStyle);
             }
         }
 

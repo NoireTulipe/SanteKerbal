@@ -135,12 +135,17 @@ namespace SanteKerbal
 
         private void NeedsTick(double dt)
         {
-            List<KerbalHealth> alive = AliveCrew();
+            // Les dormeurs ne mangent ni ne boivent : ils ne consomment que de l'électricité
+            List<KerbalHealth> all = AliveCrew();
+            List<KerbalHealth> alive = all.Where(k => !k.Asleep).ToList();
+            List<KerbalHealth> sleepers = all.Where(k => k.Asleep).ToList();
             Equipment eq = Equipment.FromParts(vessel.parts);
-            if (alive.Count == 0 && !eq.Any)
+            if (all.Count == 0 && !eq.Any)
                 return;
 
-            NeedsResult r = LifeSupportSim.Consume(new LoadedStore(vessel), alive.Count, eq, dt);
+            var store = new LoadedStore(vessel);
+            Hibernation.Tick(store, sleepers, dt, vessel);
+            NeedsResult r = LifeSupportSim.Consume(store, alive.Count, eq, dt);
             UpdateEquipmentStatus(eq, r, alive.Count, dt);
 
             foreach (KerbalHealth k in alive)

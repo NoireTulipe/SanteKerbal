@@ -70,13 +70,16 @@ namespace SanteKerbal
             {
                 if (a == null)
                     continue;
-                if (a.enabled == k.Dead)
-                    a.enabled = !k.Dead;
+                bool frozen = k.Dead || k.Asleep;
+                if (a.enabled == frozen)
+                    a.enabled = !frozen;
                 a.speed = speed;
             }
 
             // Teint : pâlit par paliers, gris à la mort
-            int level = k.Dead ? PaleTextures.DeadLevel : Mathf.CeilToInt(amount * PaleTextures.AliveLevels);
+            int level = k.Dead ? PaleTextures.DeadLevel
+                : k.Asleep ? PaleTextures.FrozenLevel
+                : Mathf.CeilToInt(amount * PaleTextures.AliveLevels);
             if (level != appliedLevel)
                 ApplySkinLevel(level);
 
@@ -93,7 +96,9 @@ namespace SanteKerbal
             // Tête : penche progressivement, tombe à la mort
             if (head != null)
             {
-                float tilt = k.Dead ? Settings.DeadHeadTilt : amount * Settings.MaxHeadTilt;
+                float tilt = k.Dead ? Settings.DeadHeadTilt
+                    : k.Asleep ? 12f    // tête légèrement inclinée, comme endormi
+                    : amount * Settings.MaxHeadTilt;
                 Quaternion current = head.localRotation;
                 Quaternion baseRot = headWritten && current == lastWritten ? lastBase : current;
                 Quaternion written = baseRot * Quaternion.AngleAxis(tilt, Settings.HeadTiltAxis);

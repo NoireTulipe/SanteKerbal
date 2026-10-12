@@ -12,6 +12,7 @@ namespace SanteKerbal
     {
         public const int AliveLevels = 4;          // niveaux 1..4 de pâleur (0 = texture d'origine)
         public const int DeadLevel = AliveLevels + 1;
+        public const int FrozenLevel = AliveLevels + 2;   // hibernation : teint bleuté givré
 
         private static readonly Dictionary<int, Color32[]> sourcePixels = new Dictionary<int, Color32[]>();
         private static readonly Dictionary<long, Texture2D> cache = new Dictionary<long, Texture2D>();
@@ -52,16 +53,18 @@ namespace SanteKerbal
 
             var pixels = new Color32[src.Length];
             bool dead = level == DeadLevel;
-            float t = dead ? 1f : Settings.MaxPaleness * level / AliveLevels;
+            bool frozen = level == FrozenLevel;
+            float t = dead ? 1f : frozen ? 0.75f : Settings.MaxPaleness * level / AliveLevels;
+            Color ice = new Color(0.72f, 0.88f, 1f);
             Color pale = Settings.PaleColor;
             Color deadTint = Settings.DeadColor;
             for (int i = 0; i < src.Length; i++)
             {
                 Color c = src[i];
                 float lum = 0.3f * c.r + 0.59f * c.g + 0.11f * c.b;
-                Color target = dead
-                    ? deadTint * (0.45f + 0.55f * lum)                    // gris-vert terne
-                    : Color.Lerp(new Color(lum, lum, lum), pale, 0.6f);   // désaturé et éclairci
+                Color target = dead ? deadTint * (0.45f + 0.55f * lum)                  // gris-vert terne
+                    : frozen ? ice * (0.55f + 0.5f * lum)                                // bleu givré
+                    : Color.Lerp(new Color(lum, lum, lum), pale, 0.6f);                  // désaturé et éclairci
                 Color r = Color.Lerp(c, target, t);
                 r.a = c.a;
                 pixels[i] = r;

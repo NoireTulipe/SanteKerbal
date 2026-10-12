@@ -148,9 +148,9 @@ namespace SanteKerbal
                 foreach (ProtoCrewMember pcm in crew)
                 {
                     KerbalHealth k = HealthScenario.Instance.Get(pcm);
-                    if (!k.Dead)
+                    if (!k.Dead && !k.Asleep)   // les dormeurs ne consomment ni eau ni nourriture
                         alive++;
-                    DrawKerbal(k, vessel);
+                    DrawKerbal(pcm, k, vessel);
                 }
             }
 
@@ -160,7 +160,7 @@ namespace SanteKerbal
             SupplyPanel.Draw(water, waterMax, food, foodMax, alive, Equipment.FromParts(vessel.parts));
         }
 
-        private void DrawKerbal(KerbalHealth k, Vessel vessel)
+        private void DrawKerbal(ProtoCrewMember pcm, KerbalHealth k, Vessel vessel)
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(k.Name, GUILayout.Width(150));
@@ -185,6 +185,8 @@ namespace SanteKerbal
                 GUILayout.Space(4);
             }
 
+            DrawHibernation(pcm, k, vessel);
+
             if (Settings.DebugTools && !k.Dead)
             {
                 GUILayout.BeginHorizontal();
@@ -203,6 +205,36 @@ namespace SanteKerbal
                 string lack = k.LackWater && k.LackFood ? "soif et faim" : k.LackWater ? "soif" : "faim";
                 GUILayout.Label("<color=#ff8060>   ! " + lack + "</color>", richLabelStyle);
             }
+        }
+
+        /// <summary>État d'hibernation et boutons Endormir / Réveiller (Kerbal assis dans un caisson).</summary>
+        private void DrawHibernation(ProtoCrewMember pcm, KerbalHealth k, Vessel vessel)
+        {
+            if (k.Dead)
+                return;
+            if (k.Waking)
+            {
+                double left = System.Math.Max(0, k.WakeUntil - Planetarium.GetUniversalTime());
+                GUILayout.Label($"<color=#9fd0ff>   Réveil en cours : encore {KSPUtil.PrintTimeCompact(left, false)}</color>", richLabelStyle);
+                return;
+            }
+            if (!Hibernation.Available || Hibernation.CryoPartOf(vessel, pcm) == null)
+                return;
+
+            GUILayout.BeginHorizontal();
+            if (k.Asleep)
+            {
+                GUILayout.Label("<color=#9fd0ff>   En hibernation</color>", richLabelStyle, GUILayout.Width(150));
+                if (GUILayout.Button("Réveiller", GUILayout.Width(110)))
+                    Hibernation.Wake(k, pcm, vessel);
+            }
+            else
+            {
+                GUILayout.Label("   Caisson d'hibernation", GUILayout.Width(150));
+                if (GUILayout.Button("Endormir", GUILayout.Width(110)))
+                    Hibernation.Sleep(k, pcm, vessel);
+            }
+            GUILayout.EndHorizontal();
         }
 
         private static void ChangeHealth(KerbalHealth k, double delta, Vessel vessel)

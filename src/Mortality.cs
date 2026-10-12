@@ -38,6 +38,19 @@ namespace SanteKerbal
                 pcm.SetInactive(Forever, false);
         }
 
+        /// <summary>Rend la main à un Kerbal (fin d'hibernation) : il peut de nouveau piloter.</summary>
+        public static void Revive(ProtoCrewMember pcm)
+        {
+            pcm.inactiveTimeEnd = 0;
+            pcm.inactive = false;
+        }
+
+        /// <summary>Mort, endormi ou en cours de réveil : ni pilotage, ni EVA, ni transfert.</summary>
+        public static bool IsIncapacitated(ProtoCrewMember pcm)
+        {
+            return pcm != null && HealthScenario.Instance != null && HealthScenario.Instance.IsIncapacitated(pcm.name);
+        }
+
         public static bool IsDead(ProtoCrewMember pcm)
         {
             return pcm != null && HealthScenario.Instance != null && HealthScenario.Instance.IsDead(pcm.name);
@@ -50,6 +63,9 @@ namespace SanteKerbal
                 return;
             foreach (ProtoCrewMember pcm in pv.GetVesselCrew())
             {
+                // Les dormeurs se réveillent à l'arrivée, sans délai
+                if (HealthScenario.Instance != null && !IsDead(pcm))
+                    Hibernation.WakeInstantly(HealthScenario.Instance.Get(pcm), pcm);
                 if (!IsDead(pcm) || pcm.rosterStatus == ProtoCrewMember.RosterStatus.Dead)
                     continue;
                 pcm.rosterStatus = ProtoCrewMember.RosterStatus.Dead;

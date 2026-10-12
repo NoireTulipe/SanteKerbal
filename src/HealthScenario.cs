@@ -52,6 +52,11 @@ namespace SanteKerbal
 
         #region Données
 
+        public bool IsIncapacitated(string name)
+        {
+            return kerbals.TryGetValue(name, out KerbalHealth k) && k.Incapacitated;
+        }
+
         public bool IsDead(string name)
         {
             return kerbals.TryGetValue(name, out KerbalHealth k) && k.Dead;
@@ -138,6 +143,7 @@ namespace SanteKerbal
             {
                 nextSettingsCheck = Time.realtimeSinceStartup + 1f;
                 Settings.ApplyGame();
+                CheckHibernation();
             }
 
             GameScenes scene = HighLogic.LoadedScene;
@@ -177,6 +183,21 @@ namespace SanteKerbal
             return t == VesselType.EVA || t == VesselType.Debris || t == VesselType.SpaceObject || t == VesselType.Flag;
         }
 
+        /// <summary>Fin des réveils ; si l'hibernation est désactivée, tout le monde se réveille.</summary>
+        private void CheckHibernation()
+        {
+            if (HighLogic.LoadedScene == GameScenes.EDITOR || HighLogic.CurrentGame == null)
+                return;
+            if (!Hibernation.Available)
+            {
+                foreach (KerbalHealth k in kerbals.Values)
+                    if (k.Asleep || k.Waking)
+                        Hibernation.WakeInstantly(k, HighLogic.CurrentGame.CrewRoster?[k.Name]);
+                return;
+            }
+            Hibernation.FinishWakeUps(kerbals.Values, Planetarium.GetUniversalTime());
+        }
+
         /// <summary>Renvoie true (et avance l'horloge) si assez de temps de jeu s'est écoulé.</summary>
         private bool TryTick(Guid id, double now, double minDt, out double dt)
         {
@@ -196,12 +217,15 @@ namespace SanteKerbal
         {
             ProtoVessel pv = v.protoVessel;
             List<ProtoCrewMember> crew = pv.GetVesselCrew();
-            List<KerbalHealth> alive = crew.Select(Get).Where(k => !k.Dead).ToList();
+            // Les dormeurs ne mangent ni ne boivent : ils ne consomment que de l'électricité
+            List<KerbalHealth> alive = crew.Select(Get).Where(k => !k.Dead && !k.Asleep).ToList();
+            List<KerbalHealth> sleepers = crew.Select(Get).Where(k => !k.Dead && k.Asleep).ToList();
             Equipment eq = Equipment.FromProto(pv);
-            if (alive.Count == 0 && !eq.Any)
+            if (alive.Count == 0 && sleepers.Count == 0 && !eq.Any)
                 return;
 
             var store = new ProtoStore(pv);
+            Hibernation.Tick(store, sleepers, dt, v);
             NeedsResult r = LifeSupportSim.Consume(store, alive.Count, eq, dt);
             foreach (KerbalHealth k in alive)
             {

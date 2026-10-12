@@ -45,6 +45,10 @@ namespace SanteKerbal
             toolTip = "Les Kerbals rentrés récupèrent leur santé au Complexe des astronautes.")]
         public bool kscRest = true;
 
+        [GameParameters.CustomParameterUI("Hibernation",
+            toolTip = "Caissons d'hibernation : les dormeurs ne mangent ni ne boivent, mais consomment de l'électricité.")]
+        public bool hibernation = true;
+
         public override string Title => "Bien-être de l'équipage";
         public override string DisplaySection => SKSection.Display;
         public override string Section => SKSection.Id;
@@ -79,6 +83,7 @@ namespace SanteKerbal
             }
             enabled = true;
             kscRest = true;
+            hibernation = true;
         }
     }
 

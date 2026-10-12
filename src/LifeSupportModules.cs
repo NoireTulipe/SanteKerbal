@@ -41,6 +41,52 @@ namespace SanteKerbal
         }
     }
 
+    /// <summary>
+    /// Caisson d'hibernation : ses occupants peuvent être endormis (voir Hibernation).
+    /// Les réglages (électricité, réveil) sont dans SanteKerbal.cfg.
+    /// </summary>
+    public class ModuleSKCryoPod : PartModule
+    {
+        [KSPField(guiActive = true, guiName = "Hibernation")]
+        public string status = "—";
+
+        [KSPEvent(guiActive = true, guiName = "Endormir les occupants")]
+        public void SleepAll() => Hibernation.SleepAll(part);
+
+        [KSPEvent(guiActive = true, guiName = "Réveiller les occupants")]
+        public void WakeAll() => Hibernation.WakeAll(part);
+
+        public override string GetInfo()
+        {
+            return "Plonge ses occupants en hibernation : ils ne mangent ni ne boivent.\n" +
+                   $"Électricité : {Settings.CryoEcPerSecond:F2}/s par dormeur.\n" +
+                   $"Réveil : {Settings.CryoWakeHours:F0} h, -{Settings.CryoWakeDamage:F0} santé.";
+        }
+
+        public override void OnUpdate()
+        {
+            base.OnUpdate();
+            if (HealthScenario.Instance == null)
+                return;
+            int asleep = 0, awake = 0, waking = 0;
+            foreach (ProtoCrewMember pcm in part.protoModuleCrew)
+            {
+                KerbalHealth k = HealthScenario.Instance.Get(pcm);
+                if (k.Dead) continue;
+                if (k.Asleep) asleep++;
+                else if (k.Waking) waking++;
+                else awake++;
+            }
+            bool on = Settings.Enabled && Settings.Hibernation;
+            Events[nameof(SleepAll)].guiActive = on && awake > 0;
+            Events[nameof(WakeAll)].guiActive = on && asleep > 0;
+            status = !on ? "Désactivée"
+                : asleep > 0 ? $"{asleep} dormeur(s), {asleep * Settings.CryoEcPerSecond:F1} élec/s"
+                : waking > 0 ? $"{waking} en cours de réveil"
+                : "Aucun dormeur";
+        }
+    }
+
     /// <summary>Récupère une partie de l'eau consommée par l'équipage, contre de l'électricité.</summary>
     public class ModuleSKRecycler : ModuleSKEquipment
     {

@@ -10,7 +10,12 @@ namespace SanteKerbal
         public string Name;
         public double Health = Max;
         public bool Dead;
-        public bool Asleep;   // en hibernation
+        public bool Asleep;        // en hibernation
+        public double WakeUntil;   // UT de fin du réveil (0 = pas en train de se réveiller)
+
+        public bool Waking => WakeUntil > 0;
+        /// <summary>Ne peut ni piloter, ni sortir, ni être transféré.</summary>
+        public bool Incapacitated => Dead || Asleep || Waking;
 
         // Derniers états connus, pour n'envoyer les messages qu'au changement
         public bool LackWater;
@@ -41,6 +46,7 @@ namespace SanteKerbal
             node.AddValue("health", Health);
             node.AddValue("dead", Dead);
             node.AddValue("asleep", Asleep);
+            node.AddValue("wakeUntil", WakeUntil.ToString("R"));
             node.AddValue("lackWater", LackWater);
             node.AddValue("lackFood", LackFood);
         }
@@ -54,6 +60,7 @@ namespace SanteKerbal
             node.TryGetValue("health", ref k.Health);
             node.TryGetValue("dead", ref k.Dead);
             node.TryGetValue("asleep", ref k.Asleep);
+            node.TryGetValue("wakeUntil", ref k.WakeUntil);
             node.TryGetValue("lackWater", ref k.LackWater);
             node.TryGetValue("lackFood", ref k.LackFood);
             return k;
@@ -61,7 +68,10 @@ namespace SanteKerbal
 
         public override string ToString()
         {
-            return Dead ? $"{Name} (mort)" : $"{Name} {Health:F1}";
+            if (Dead) return $"{Name} (mort)";
+            if (Asleep) return $"{Name} {Health:F1} (endormi)";
+            if (Waking) return $"{Name} {Health:F1} (réveil)";
+            return $"{Name} {Health:F1}";
         }
     }
 }

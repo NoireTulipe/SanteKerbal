@@ -1,0 +1,127 @@
+using System.Collections.Generic;
+
+namespace SanteKerbal
+{
+    /// <summary>
+    /// Hibernation : un Kerbal endormi dans un caisson ne mange ni ne boit, sa santé est figée,
+    /// mais il consomme de l'électricité et ne peut pas piloter. Sans électricité, il se dégrade vite.
+    /// Le réveil prend quelques heures (toujours incapable de piloter) et coûte un peu de santé.
+    /// </summary>
+    internal static class Hibernation
+    {
+        public static bool Available => Settings.Enabled && Settings.Hibernation;
+
+        /// <summary>Le Kerbal est-il assis dans une pièce équipée d'un caisson ?</summary>
+        public static Part CryoPartOf(Vessel vessel, ProtoCrewMember pcm)
+        {
+            if (vessel == null || !vessel.loaded)
+                return null;
+            foreach (Part p in vessel.parts)
+                if (p.protoModuleCrew.Contains(pcm))
+                    return p.FindModuleImplementing<ModuleSKCryoPod>() != null ? p : null;
+            return null;
+        }
+
+        public static void Sleep(KerbalHealth k, ProtoCrewMember pcm, Vessel vessel)
+        {
+            if (!Available || k.Dead || k.Asleep)
+                return;
+            k.Asleep = true;
+            k.WakeUntil = 0;
+            k.LackWater = k.LackFood = false;
+            Mortality.Incapacitate(pcm);
+            HealthEvents.Announce(vessel, $"{k.Name} est plongé en hibernation.");
+        }
+
+        public static void Wake(KerbalHealth k, ProtoCrewMember pcm, Vessel vessel)
+        {
+            if (!k.Asleep || k.Dead)
+                return;
+            k.Asleep = false;
+            k.LackWater = false;   // efface la mémoire « caisson sans courant »
+            double before = k.Health;
+            k.Damage(Settings.CryoWakeDamage);
+            k.WakeUntil = Planetarium.GetUniversalTime() + Settings.CryoWakeHours * 3600.0;
+            HealthEvents.Announce(vessel, $"Réveil de {k.Name} en cours ({Settings.CryoWakeHours:F0} h).");
+            HealthEvents.HealthChanged(vessel, k, before, "réveil difficile");
+        }
+
+        public static void SleepAll(Part part)
+        {
+            if (HealthScenario.Instance == null)
+                return;
+            foreach (ProtoCrewMember pcm in new List<ProtoCrewMember>(part.protoModuleCrew))
+                Sleep(HealthScenario.Instance.Get(pcm), pcm, part.vessel);
+        }
+
+        public static void WakeAll(Part part)
+        {
+            if (HealthScenario.Instance == null)
+                return;
+            foreach (ProtoCrewMember pcm in new List<ProtoCrewMember>(part.protoModuleCrew))
+                Wake(HealthScenario.Instance.Get(pcm), pcm, part.vessel);
+        }
+
+        /// <summary>
+        /// Électricité des dormeurs pendant dt ; sans courant, ils perdent de la santé.
+        /// Hors chargement, comme pour les autres équipements : courant disponible tant que
+        /// les batteries ne sont pas vides, sans les vider.
+        /// </summary>
+        public static void Tick(IVesselStore store, List<KerbalHealth> sleepers, double dt, Vessel vessel)
+        {
+            if (sleepers.Count == 0)
+                return;
+            double need = sleepers.Count * Settings.CryoEcPerSecond * dt;
+            double frac;
+            if (store.IsLoaded)
+                frac = need > 0 ? System.Math.Min(1.0, store.Take(LifeSupportSim.ElectricCharge, need) / need) : 1;
+            else
+                frac = store.Amount(LifeSupportSim.ElectricCharge) > 0.01 ? 1 : 0;
+
+            double days = dt / KSPUtil.dateTimeFormatter.Day;
+            double damage = (1.0 - frac) * Settings.CryoUnpoweredDamagePerDay * days;
+            bool unpowered = frac < 0.999;
+            foreach (KerbalHealth k in sleepers)
+            {
+                // LackWater sert ici de mémoire « caisson sans courant » pour n'annoncer qu'au changement
+                if (unpowered != k.LackWater)
+                    HealthEvents.Announce(vessel, unpowered
+                        ? $"Caisson de {k.Name} : panne d'électricité !"
+                        : $"Caisson de {k.Name} : électricité rétablie.");
+                k.LackWater = unpowered;
+
+                double before = k.Health;
+                k.Damage(damage);
+                HealthEvents.HealthChanged(vessel, k, before, "caisson sans électricité");
+            }
+        }
+
+        /// <summary>Termine les réveils arrivés à échéance (tous les Kerbals, chargés ou non).</summary>
+        public static void FinishWakeUps(IEnumerable<KerbalHealth> all, double now)
+        {
+            foreach (KerbalHealth k in all)
+            {
+                if (!k.Waking || now < k.WakeUntil)
+                    continue;
+                k.WakeUntil = 0;
+                ProtoCrewMember pcm = HighLogic.CurrentGame?.CrewRoster?[k.Name];
+                if (pcm != null && !k.Dead)
+                    Mortality.Revive(pcm);
+                Log.Info($"{k.Name} est réveillé");
+                ScreenMessages.PostScreenMessage($"{k.Name} est réveillé et reprend son poste.", 5f, ScreenMessageStyle.UPPER_CENTER);
+            }
+        }
+
+        /// <summary>À la récupération ou si l'hibernation est désactivée : réveil immédiat, sans délai.</summary>
+        public static void WakeInstantly(KerbalHealth k, ProtoCrewMember pcm)
+        {
+            if (k.Dead || (!k.Asleep && !k.Waking))
+                return;
+            k.Asleep = false;
+            k.WakeUntil = 0;
+            k.LackWater = false;
+            if (pcm != null)
+                Mortality.Revive(pcm);
+        }
+    }
+}

@@ -47,6 +47,13 @@ namespace SanteKerbal
         public static bool GEffects = true;
         public static bool HeatEffects = true;
         public static bool KscRest = true;
+        public static bool Hibernation = true;
+
+        // Hibernation
+        public static double CryoEcPerSecond = 0.5;          // électricité par dormeur
+        public static double CryoWakeHours = 2;              // durée du réveil (heures de jeu)
+        public static double CryoWakeDamage = 5;             // santé perdue au réveil
+        public static double CryoUnpoweredDamagePerDay = 25; // perte par jour sans électricité
         public static bool VisualDecline = true;
         public static bool Monitor = true;       // moniteur cardiaque dans la fenêtre
         public static bool MonitorSound = true;  // bips du moniteur et bip continu de la mort
@@ -144,6 +151,10 @@ namespace SanteKerbal
             if (n.TryGetValue("deathView", ref deathView))
                 DeathPortrait = DeathViews.Parse(deathView, DeathPortrait);
             n.TryGetValue("hideEyesWhenDead", ref HideEyesWhenDead);
+            n.TryGetValue("cryoEcPerSecond", ref CryoEcPerSecond);
+            n.TryGetValue("cryoWakeHours", ref CryoWakeHours);
+            n.TryGetValue("cryoWakeDamage", ref CryoWakeDamage);
+            n.TryGetValue("cryoUnpoweredDamagePerDay", ref CryoUnpoweredDamagePerDay);
             n.TryGetValue("debugLogInterval", ref DebugLogInterval);
             n.TryGetValue("debugTools", ref DebugTools);
 
@@ -200,6 +211,7 @@ namespace SanteKerbal
             WaterPerDay = Defaults.WaterPerDay * Mathf.Max(0f, crew.consumption);
             FoodPerDay = Defaults.FoodPerDay * Mathf.Max(0f, crew.consumption);
             KscRest = crew.kscRest;
+            Hibernation = crew.hibernation;
 
             GEffects = danger.gEffects;
             HighG = danger.highG;
@@ -224,7 +236,7 @@ namespace SanteKerbal
 
         public static string Describe()
         {
-            return $"actif={Enabled}, G={GEffects}, chaleur={HeatEffects}, repos KSC={KscRest}, " +
+            return $"actif={Enabled}, G={GEffects}, chaleur={HeatEffects}, repos KSC={KscRest}, hibernation={Hibernation}, " +
                    $"dépérissement={VisualDecline}, moniteur={Monitor} (son={MonitorSound}, portraits={PortraitMonitor}), portrait d'un mort={DeathViews.Label(DeathPortrait)}, " +
                    $"eau={WaterPerDay}/j, nourriture={FoodPerDay}/j, survie sans eau={DaysWithoutWater} j, " +
                    $"sans nourriture={DaysWithoutFood} j, régén={RegenPerDay}/j, " +
