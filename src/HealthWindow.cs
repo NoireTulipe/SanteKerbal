@@ -207,7 +207,7 @@ namespace SanteKerbal
             }
         }
 
-        /// <summary>État d'hibernation et boutons Endormir / Réveiller (Kerbal assis dans un caisson).</summary>
+        /// <summary>État d'hibernation et bouton Hiberner / Réveiller.</summary>
         private void DrawHibernation(ProtoCrewMember pcm, KerbalHealth k, Vessel vessel)
         {
             if (k.Dead)
@@ -218,22 +218,18 @@ namespace SanteKerbal
                 GUILayout.Label($"<color=#9fd0ff>   Réveil en cours : encore {KSPUtil.PrintTimeCompact(left, false)}</color>", richLabelStyle);
                 return;
             }
-            if (!Hibernation.Available || Hibernation.CryoPartOf(vessel, pcm) == null)
+
+            Hibernation.Action action = Hibernation.ActionFor(k, pcm, vessel);
+            if (action == Hibernation.Action.None)
                 return;
 
             GUILayout.BeginHorizontal();
-            if (k.Asleep)
-            {
-                GUILayout.Label("<color=#9fd0ff>   En hibernation</color>", richLabelStyle, GUILayout.Width(150));
-                if (GUILayout.Button("Réveiller", GUILayout.Width(110)))
-                    Hibernation.Wake(k, pcm, vessel);
-            }
-            else
-            {
-                GUILayout.Label("   Caisson d'hibernation", GUILayout.Width(150));
-                if (GUILayout.Button("Endormir", GUILayout.Width(110)))
-                    Hibernation.Sleep(k, pcm, vessel);
-            }
+            string state = k.Asleep ? "<color=#9fd0ff>   En hibernation</color>"
+                : action == Hibernation.Action.Sleep ? "   Dans un caisson"
+                : "   Caisson libre à bord";
+            GUILayout.Label(state, richLabelStyle, GUILayout.Width(180));
+            if (GUILayout.Button(Hibernation.Label(action), GUILayout.Width(110)))
+                Hibernation.Do(action, k, pcm, vessel);
             GUILayout.EndHorizontal();
         }
 

@@ -17,6 +17,19 @@ namespace SanteKerbal
         // Nombre de Kerbals sautés d'affilée en IVA (évite de tourner en rond)
         private int ivaSkips;
 
+        public static CrewController Instance { get; private set; }
+
+        public void Awake() => Instance = this;
+
+        /// <summary>Exécute une action à l'image suivante (après recréation de l'intérieur, par exemple).</summary>
+        public void NextFrame(System.Action action) => StartCoroutine(NextFrameRoutine(action));
+
+        private static System.Collections.IEnumerator NextFrameRoutine(System.Action action)
+        {
+            yield return null;
+            action();
+        }
+
         public void Start()
         {
             GameEvents.onAttemptEva.Add(OnAttemptEva);
@@ -26,6 +39,8 @@ namespace SanteKerbal
 
         public void OnDestroy()
         {
+            if (Instance == this)
+                Instance = null;
             GameEvents.onAttemptEva.Remove(OnAttemptEva);
             GameEvents.onAttemptTransfer.Remove(OnAttemptTransfer);
             GameEvents.onCrewTransferSelected.Remove(OnCrewTransferSelected);

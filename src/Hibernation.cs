@@ -22,6 +22,93 @@ namespace SanteKerbal
             return null;
         }
 
+        /// <summary>Ce que le bouton d'hibernation propose pour ce Kerbal.</summary>
+        public enum Action { None, Sleep, MoveAndSleep, Wake }
+
+        public static Action ActionFor(KerbalHealth k, ProtoCrewMember pcm, Vessel vessel)
+        {
+            if (!Available || k.Dead || k.Waking || vessel == null || !vessel.loaded)
+                return Action.None;
+            if (k.Asleep)
+                return Action.Wake;
+            if (CryoPartOf(vessel, pcm) != null)
+                return Action.Sleep;
+            return FreeCryoPart(vessel) != null ? Action.MoveAndSleep : Action.None;
+        }
+
+        public static string Label(Action a)
+        {
+            switch (a)
+            {
+                case Action.Sleep:
+                case Action.MoveAndSleep: return "Hiberner";
+                case Action.Wake: return "Réveiller";
+                default: return null;
+            }
+        }
+
+        /// <summary>Exécute l'action proposée par ActionFor.</summary>
+        public static void Do(Action a, KerbalHealth k, ProtoCrewMember pcm, Vessel vessel)
+        {
+            switch (a)
+            {
+                case Action.Sleep:
+                    Sleep(k, pcm, vessel);
+                    break;
+                case Action.Wake:
+                    Wake(k, pcm, vessel);
+                    break;
+                case Action.MoveAndSleep:
+                    MoveToCryoAndSleep(k, pcm, vessel);
+                    break;
+            }
+        }
+
+        /// <summary>Un caisson du vaisseau avec une place libre.</summary>
+        public static Part FreeCryoPart(Vessel vessel)
+        {
+            foreach (Part p in vessel.parts)
+                if (p.FindModuleImplementing<ModuleSKCryoPod>() != null && p.protoModuleCrew.Count < p.CrewCapacity)
+                    return p;
+            return null;
+        }
+
+        private static Part PartOf(Vessel vessel, ProtoCrewMember pcm)
+        {
+            foreach (Part p in vessel.parts)
+                if (p.protoModuleCrew.Contains(pcm))
+                    return p;
+            return null;
+        }
+
+        /// <summary>
+        /// Transfère le Kerbal dans une place libre d'un caisson puis l'endort, comme le transfert
+        /// d'équipage de KSP (CrewTransfer.MoveCrewTo) : l'intérieur est recréé à l'image suivante.
+        /// </summary>
+        private static void MoveToCryoAndSleep(KerbalHealth k, ProtoCrewMember pcm, Vessel vessel)
+        {
+            Part src = PartOf(vessel, pcm);
+            Part dst = FreeCryoPart(vessel);
+            if (src == null || dst == null || CrewController.Instance == null)
+                return;
+
+            src.RemoveCrewmember(pcm);
+            dst.AddCrewmember(pcm);
+            GameEvents.onCrewTransferred.Fire(new GameEvents.HostedFromToAction<ProtoCrewMember, Part>(pcm, src, dst));
+            Vessel.CrewWasModified(vessel);
+            Log.Info($"{k.Name} transféré dans {dst.partInfo.title} pour hiberner");
+
+            bool active = vessel == FlightGlobals.ActiveVessel;
+            if (active)
+                vessel.DespawnCrew();
+            CrewController.Instance.NextFrame(() =>
+            {
+                if (active && vessel != null)
+                    vessel.SpawnCrew();
+                Sleep(k, pcm, vessel);
+            });
+        }
+
         public static void Sleep(KerbalHealth k, ProtoCrewMember pcm, Vessel vessel)
         {
             if (!Available || k.Dead || k.Asleep)
