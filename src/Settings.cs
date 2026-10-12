@@ -159,15 +159,34 @@ namespace SanteKerbal
             Log.Info("Réglages chargés : " + Describe());
         }
 
-        /// <summary>Remplace les réglages par ceux de la partie en cours (paramètres de difficulté).</summary>
+        private static string lastApplied;
+
+        /// <summary>
+        /// Remplace les réglages par ceux de la partie en cours (paramètres de difficulté).
+        /// Appelé régulièrement : KSP ne prévient pas de façon fiable quand ces paramètres changent.
+        /// N'écrit dans le log que si quelque chose a changé.
+        /// </summary>
         public static void ApplyGame()
         {
             GameParameters p = HighLogic.CurrentGame?.Parameters;
             if (p == null)
                 return;
-            SKCrewParams crew = p.CustomParams<SKCrewParams>();
-            SKDangerParams danger = p.CustomParams<SKDangerParams>();
-            SKDisplayParams display = p.CustomParams<SKDisplayParams>();
+            SKCrewParams crew;
+            SKDangerParams danger;
+            SKDisplayParams display;
+            try
+            {
+                crew = p.CustomParams<SKCrewParams>();
+                danger = p.CustomParams<SKDangerParams>();
+                display = p.CustomParams<SKDisplayParams>();
+            }
+            catch (System.ArgumentException e)
+            {
+                if (lastApplied != "erreur")
+                    Log.Error("Paramètres de la partie introuvables, réglages du .cfg utilisés : " + e.Message);
+                lastApplied = "erreur";
+                return;
+            }
             if (crew == null || danger == null || display == null)
                 return;
 
@@ -189,7 +208,12 @@ namespace SanteKerbal
             DeathPortrait = DeathViews.Parse(display.deathView, Defaults.DeathPortrait);
             DebugTools = display.debugTools;
 
-            Log.Info("Réglages de la partie appliqués : " + Describe());
+            string described = Describe();
+            if (described != lastApplied)
+            {
+                lastApplied = described;
+                Log.Info("Réglages de la partie appliqués : " + described);
+            }
         }
 
         public static string Describe()

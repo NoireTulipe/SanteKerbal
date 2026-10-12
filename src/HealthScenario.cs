@@ -25,6 +25,7 @@ namespace SanteKerbal
         private readonly Dictionary<Guid, double> lastUpdate = new Dictionary<Guid, double>();
 
         private float nextDebugLog;
+        private float nextSettingsCheck;
 
         public override void OnAwake()
         {
@@ -33,7 +34,6 @@ namespace SanteKerbal
             // Déclaration officielle des morts à la récupération (après la remise « disponible » par KSP)
             GameEvents.onVesselRecoveryProcessing.Add(OnRecoveryProcessing);
             GameEvents.onVesselRecoveryProcessingComplete.Add(OnRecoveryProcessing);
-            GameEvents.OnGameSettingsApplied.Add(Settings.ApplyGame);
             Settings.ApplyGame();
         }
 
@@ -41,7 +41,6 @@ namespace SanteKerbal
         {
             GameEvents.onVesselRecoveryProcessing.Remove(OnRecoveryProcessing);
             GameEvents.onVesselRecoveryProcessingComplete.Remove(OnRecoveryProcessing);
-            GameEvents.OnGameSettingsApplied.Remove(Settings.ApplyGame);
             if (Instance == this)
                 Instance = null;
         }
@@ -134,6 +133,13 @@ namespace SanteKerbal
 
         public void Update()
         {
+            // Réglages de la partie : relus chaque seconde (pris en compte juste après les paramètres de difficulté)
+            if (Time.realtimeSinceStartup >= nextSettingsCheck)
+            {
+                nextSettingsCheck = Time.realtimeSinceStartup + 1f;
+                Settings.ApplyGame();
+            }
+
             GameScenes scene = HighLogic.LoadedScene;
             if (scene != GameScenes.FLIGHT && scene != GameScenes.SPACECENTER && scene != GameScenes.TRACKSTATION)
                 return;
