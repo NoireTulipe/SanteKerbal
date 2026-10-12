@@ -277,6 +277,7 @@ namespace SanteKerbal
                     Mortality.Revive(pcm);
                 Log.Info($"{k.Name} est réveillé");
                 ScreenMessages.PostScreenMessage($"{k.Name} est réveillé.", 5f, ScreenMessageStyle.UPPER_CENTER);
+                Journal.Add(pcm?.KerbalRef?.InVessel?.vesselName ?? "", $"{k.Name} est réveillé.", false);
             }
 
             // Retour au poste : dès que le Kerbal est opérationnel et son vaisseau chargé

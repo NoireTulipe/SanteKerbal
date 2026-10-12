@@ -5,10 +5,14 @@ namespace SanteKerbal
     {
         private static readonly double[] Thresholds = { 50.0, 25.0, 10.0 };
 
-        public static void Announce(Vessel vessel, string message)
+        public static void Announce(Vessel vessel, string message) => Announce(vessel, message, false);
+
+        /// <summary>Message à l'écran, dans KSP.log et dans le journal de bord.</summary>
+        public static void Announce(Vessel vessel, string message, bool alert)
         {
             string name = vessel != null ? vessel.vesselName : "?";
             Log.Info("[" + name + "] " + message);
+            Journal.Add(name, message, alert);
             // Pour un autre vaisseau que l'actif, on précise lequel
             string shown = vessel != null && vessel == FlightGlobals.ActiveVessel ? message : name + " : " + message;
             ScreenMessages.PostScreenMessage(shown, 5f, ScreenMessageStyle.UPPER_CENTER);
@@ -17,7 +21,7 @@ namespace SanteKerbal
         /// <summary>Annonce importante : arrête aussi l'accélération du temps (réglage stopWarpOnAlert).</summary>
         public static void Alert(Vessel vessel, string message)
         {
-            Announce(vessel, message);
+            Announce(vessel, message, true);
             if (Settings.StopWarpOnAlert && TimeWarp.CurrentRateIndex > 0)
             {
                 TimeWarp.SetRate(0, false);

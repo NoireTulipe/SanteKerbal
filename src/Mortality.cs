@@ -72,6 +72,7 @@ namespace SanteKerbal
                 pcm.flightLog.AddEntry(FlightLog.EntryType.Die);
                 Log.Info($"{pcm.name} déclaré officiellement mort à la récupération de {pv.vesselName}");
                 ScreenMessages.PostScreenMessage($"{pcm.name} a été déclaré officiellement mort.", 8f, ScreenMessageStyle.UPPER_CENTER);
+                Journal.Add(pv.vesselName, $"{pcm.name} a été déclaré officiellement mort à la récupération.", true);
             }
         }
 

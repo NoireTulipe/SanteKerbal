@@ -39,6 +39,8 @@ namespace SanteKerbal
                     case Page.Greenhouse: DrawGreenhousePage(v); break;
                     case Page.Recycler: DrawRecyclerPage(v); break;
                     case Page.Power: DrawPowerPage(v); break;
+                    case Page.Time: DrawTimePage(v); break;
+                    case Page.Journal: DrawJournalPage(); break;
                 }
             }
             GUILayout.EndVertical();

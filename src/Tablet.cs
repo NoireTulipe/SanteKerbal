@@ -24,9 +24,9 @@ namespace SanteKerbal
         private const float BaseWidth = 760f;
         private const float TopBarHeight = 26f;
 
-        private enum Page { Home, Health, Crew, Stocks, Greenhouse, Recycler, Power }
+        private enum Page { Home, Health, Crew, Stocks, Greenhouse, Recycler, Power, Time, Journal }
 
-        private static readonly Page[] HomeIcons = { Page.Health, Page.Crew, Page.Stocks, Page.Greenhouse, Page.Recycler, Page.Power };
+        private static readonly Page[] HomeIcons = { Page.Health, Page.Crew, Page.Stocks, Page.Greenhouse, Page.Recycler, Page.Power, Page.Time, Page.Journal };
 
         /// <summary>Icônes de l'accueil : Serre et Recycleur seulement si le vaisseau en possède.</summary>
         private static System.Collections.Generic.List<Page> VisibleIcons(Vessel v)
@@ -67,7 +67,7 @@ namespace SanteKerbal
         private Vector2 scroll;
 
         private Texture2D tabletTex, thumbTex, dotTex;
-        private readonly Texture2D[] iconTex = new Texture2D[7];
+        private readonly Texture2D[] iconTex = new Texture2D[9];
 
         private GUIStyle titleStyle, clockStyle, iconLabelStyle, smallButton, richLabel, barLabel, bpmLabel, sectionStyle;
 
@@ -108,8 +108,10 @@ namespace SanteKerbal
             iconTex[(int)Page.Crew] = Load("personnel");
             iconTex[(int)Page.Stocks] = Load("inventaire");
             iconTex[(int)Page.Greenhouse] = Load("serre");
-            iconTex[(int)Page.Recycler] = Load("recycleur");
+            iconTex[(int)Page.Recycler] = Load("recycleur-eau");
             iconTex[(int)Page.Power] = Load("energie");
+            iconTex[(int)Page.Time] = Load("temps");
+            iconTex[(int)Page.Journal] = Load("journal");
             dotTex = MakeDot(32);
         }
 
@@ -171,6 +173,7 @@ namespace SanteKerbal
         {
             // Les bips ne sonnent que tablette ouverte sur la page Santé
             MonitorSystem.BeepEnabled = visible && !uiHidden && page == Page.Health;
+            UpdateWarp();
         }
 
         /// <summary>Empêche les clics et la molette de passer au jeu quand la souris est sur la tablette.</summary>
@@ -278,6 +281,8 @@ namespace SanteKerbal
                 case Page.Greenhouse: return "Serre";
                 case Page.Recycler: return "Recycleur";
                 case Page.Power: return "Énergie";
+                case Page.Time: return "Temps";
+                case Page.Journal: return "Journal";
                 default: return "Accueil";
             }
         }

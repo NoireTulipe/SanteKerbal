@@ -122,7 +122,9 @@ namespace SanteKerbal
                     catch (FormatException) { }
                 }
             }
-            Log.Info($"Sauvegarde lue : {kerbals.Count} Kerbal(s) suivi(s), {lastUpdate.Count} horloge(s) de vaisseau");
+            Journal.Load(node);
+            Log.Info($"Sauvegarde lue : {kerbals.Count} Kerbal(s) suivi(s), {lastUpdate.Count} horloge(s) de vaisseau, " +
+                     $"{Journal.Entries.Count} ligne(s) de journal");
         }
 
         public override void OnSave(ConfigNode node)
@@ -130,6 +132,7 @@ namespace SanteKerbal
             base.OnSave(node);
             foreach (KerbalHealth k in kerbals.Values)
                 k.Save(node.AddNode("KERBAL"));
+            Journal.Save(node);
 
             // On oublie les vaisseaux disparus (récupérés, détruits), quand la liste des vaisseaux est disponible
             HashSet<Guid> existing = null;
