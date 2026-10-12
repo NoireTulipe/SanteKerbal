@@ -1,4 +1,4 @@
-"""Mesure l'écran de la tablette et extrait ce qui le recouvre (le pouce) dans une image à part.
+"""Mesure l'écran de la tablette et crée l'image de superposition (tout sauf l'intérieur de l'écran).
 
 Usage : python tools/tablet_screen.py <tablette.png> <sortie_pouce.png>
 Affiche le rectangle de l'écran (x, y, largeur, hauteur) en pixels de l'image, origine en haut à gauche.
@@ -75,17 +75,37 @@ m = 6
 sx, sy, sw, sh = x0 + m, y0 + m, (x1 - x0 + 1) - 2 * m, (y1 - y0 + 1) - 2 * m
 print(f"ecran x={sx} y={sy} largeur={sw} hauteur={sh} (image {w}x{h})")
 
-# Pouce : pixels non sombres à l'intérieur de l'écran ; tout le reste devient transparent
+# Superposition : toute l'image SAUF l'intérieur noir de l'écran. Le cadre, la main et le pouce
+# sont ainsi redessinés devant l'interface, sans coupure possible. Le contour du pouce est élargi
+# de DILATE pixels avec un fondu, pour englober son ombre sans bord dur.
+DILATE = 3
+inside = lambda x, y: sx <= x < sx + sw and sy <= y < sy + sh
+# Masque du pouce (pixels non sombres à l'intérieur de l'écran)
+thumb = [[inside(x, y) and not dark(rows[y], x) for x in range(w)] for y in range(h)]
+# Distance (en pixels, approximation par carrés) au pouce, jusqu'à DILATE
+dist = [[0 if thumb[y][x] else 99 for x in range(w)] for y in range(h)]
+for step in range(1, DILATE + 1):
+    for y in range(sy, sy + sh):
+        for x in range(sx, sx + sw):
+            if dist[y][x] == 99:
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        yy, xx = y + dy, x + dx
+                        if 0 <= yy < h and 0 <= xx < w and dist[yy][xx] == step - 1:
+                            dist[y][x] = step
 out = []
 count = 0
 for y in range(h):
+    r = rows[y]
     line = bytearray(4 * w)
-    if sy <= y < sy + sh:
-        r = rows[y]
-        for x in range(sx, sx + sw):
-            if not dark(r, x):
-                line[4 * x:4 * x + 4] = r[4 * x:4 * x + 4]
-                count += 1
+    for x in range(w):
+        R, G, B, A = r[4 * x:4 * x + 4]
+        if not inside(x, y):
+            line[4 * x:4 * x + 4] = r[4 * x:4 * x + 4]          # hors de l'écran : image telle quelle
+        elif dist[y][x] <= DILATE:
+            fade = 1.0 - dist[y][x] / (DILATE + 1.0)             # 1 sur le pouce, décroît dans l'ombre
+            line[4 * x:4 * x + 4] = bytes([R, G, B, int(A * fade)])
+            count += 1
     out.append(line)
 write_png(sys.argv[2], w, h, out)
-print(f"pouce : {count} pixels extraits")
+print(f"superposition : {count} pixels du pouce (avec contour) + tout le cadre")
