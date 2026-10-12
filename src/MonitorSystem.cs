@@ -12,7 +12,7 @@ namespace SanteKerbal
     {
         private static readonly Dictionary<string, HeartMonitor> monitors = new Dictionary<string, HeartMonitor>();
 
-        /// <summary>Le bip n'est joué que si la fenêtre de santé est ouverte (positionné par HealthWindow).</summary>
+        /// <summary>Le bip n'est joué que si la tablette est ouverte (positionné par la tablette, page Santé).</summary>
         public static bool BeepEnabled;
 
         internal static HeartMonitor Get(string kerbalName)
