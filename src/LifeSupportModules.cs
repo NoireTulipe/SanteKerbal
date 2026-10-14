@@ -11,6 +11,10 @@ namespace SanteKerbal
 
         [KSPField] public double ecPerSecond = 0.1;
 
+        /// <summary>Total produit depuis le lancement de la pièce (rations pour la serre, eau pour le recycleur).</summary>
+        [KSPField(isPersistant = true)]
+        public double totalOutput;
+
         [KSPField(guiActive = true, guiName = "État")]
         public string status = "—";
 

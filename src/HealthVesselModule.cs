@@ -148,6 +148,7 @@ namespace SanteKerbal
             store.EcFraction = PowerSim.ResolveLoaded(store, vessel.id, needPerSecond, dt);
             Hibernation.Tick(store, sleepers, dt, vessel);
             NeedsResult r = LifeSupportSim.Consume(store, alive.Count, eq, dt);
+            eq.AddOutput(r.Recycled, r.Produced);
             UpdateEquipmentStatus(eq, r, alive.Count, dt);
 
             foreach (KerbalHealth k in alive)

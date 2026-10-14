@@ -312,13 +312,17 @@ namespace SanteKerbal
                 ? $"<color=#7fe08a>Les serres nourrissent tout l'équipage ({produced:F1} / {need:F1} rations par jour).</color>"
                 : $"Production : {produced:F1} des {need:F1} rations quotidiennes.", richLabel);
             GUILayout.Label($"<color=#a0a0a0>Consommation des serres allumées : {water:F1} eau/j, {ec:F2} élec/s</color>", richLabel);
+            double totalFood = 0;
+            foreach (var e in list) totalFood += e.module.totalOutput;
+            GUILayout.Label($"<b>Depuis le lancement</b> : {totalFood:F1} rations récoltées", richLabel);
             DrawAllOnOff(list);
 
             for (int n = 0; n < list.Count; n++)
             {
                 ModuleSKGreenhouse g = list[n].module;
                 DrawEquipment(list[n].part, g, Numbered("Serre", n, list.Count),
-                    $"+{g.foodPerDay:F1} nourriture/j, -{g.foodPerDay * g.waterPerFood:F1} eau/j, {g.ecPerSecond:F2} élec/s");
+                    $"+{g.foodPerDay:F1} nourriture/j, -{g.foodPerDay * g.waterPerFood:F1} eau/j, {g.ecPerSecond:F2} élec/s",
+                    list.Count > 1 ? $"{g.totalOutput:F1} rations récoltées depuis le lancement" : null);
             }
         }
 
@@ -349,13 +353,17 @@ namespace SanteKerbal
                 ? $"<color=#7fe08a>L'eau de tout l'équipage est recyclée ({drinkers} / {served:F0} places).</color>"
                 : $"Eau recyclée pour {System.Math.Min(served, drinkers):F0} des {drinkers} Kerbals éveillés.", richLabel);
             GUILayout.Label($"<color=#a0a0a0>Consommation des recycleurs allumés : {ec:F2} élec/s</color>", richLabel);
+            double totalWater = 0;
+            foreach (var e in list) totalWater += e.module.totalOutput;
+            GUILayout.Label($"<b>Depuis le lancement</b> : {totalWater:F1} litres d'eau recyclée", richLabel);
             DrawAllOnOff(list);
 
             for (int n = 0; n < list.Count; n++)
             {
                 ModuleSKRecycler r = list[n].module;
                 DrawEquipment(list[n].part, r, Numbered("Recycleur", n, list.Count),
-                    $"{r.recycleRatio:P0} de l'eau de {r.kerbalsServed:F0} Kerbal(s), {r.ecPerSecond:F2} élec/s");
+                    $"{r.recycleRatio:P0} de l'eau de {r.kerbalsServed:F0} Kerbal(s), {r.ecPerSecond:F2} élec/s",
+                    list.Count > 1 ? $"{r.totalOutput:F1} litres recyclés depuis le lancement" : null);
             }
         }
 
@@ -395,7 +403,7 @@ namespace SanteKerbal
         }
 
         /// <summary>Une ligne par équipement : nom, état, caractéristiques, bouton marche / arrêt.</summary>
-        private void DrawEquipment(Part part, ModuleSKEquipment m, string name, string specs)
+        private void DrawEquipment(Part part, ModuleSKEquipment m, string name, string specs, string total = null)
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label($"<b>{name}</b>  <color=#a0a0a0>{part.partInfo.title}</color>", richLabel);
@@ -406,6 +414,8 @@ namespace SanteKerbal
             string color = !m.isActive ? "#a0a0a0" : m.status.StartsWith("Manque") ? "#ff8060" : "#7fe08a";
             GUILayout.Label($"   <color={color}>{(m.isActive ? m.status : "Arrêté")}</color>", richLabel);
             GUILayout.Label($"   <color=#a0a0a0>{specs}</color>", richLabel);
+            if (total != null)
+                GUILayout.Label($"   {total}", richLabel);
             GUILayout.Space(U(4));
         }
 

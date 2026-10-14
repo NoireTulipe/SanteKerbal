@@ -250,6 +250,7 @@ namespace SanteKerbal
 
             Hibernation.Tick(store, sleepers, dt, v);
             NeedsResult r = LifeSupportSim.Consume(store, alive.Count, eq, dt);
+            eq.AddOutput(r.Recycled, r.Produced);
             foreach (KerbalHealth k in alive)
             {
                 LifeSupportSim.ApplyHealth(k, r, dt,

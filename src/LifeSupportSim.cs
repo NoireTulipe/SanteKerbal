@@ -102,6 +102,41 @@ namespace SanteKerbal
         public readonly List<ModuleSKRecycler> Recyclers = new List<ModuleSKRecycler>();
         public readonly List<ModuleSKGreenhouse> Greenhouses = new List<ModuleSKGreenhouse>();
 
+        // Vaisseau non chargé : modules de la sauvegarde et leur poids (Kerbals servis / rations par jour)
+        public readonly List<(ProtoPartModuleSnapshot ms, double weight)> ProtoRecyclers = new List<(ProtoPartModuleSnapshot, double)>();
+        public readonly List<(ProtoPartModuleSnapshot ms, double weight)> ProtoGreenhouses = new List<(ProtoPartModuleSnapshot, double)>();
+
+        /// <summary>
+        /// Répartit l'eau recyclée et la nourriture produite pendant un pas entre les équipements allumés,
+        /// au prorata de leur capacité, et l'ajoute à leur compteur « depuis le lancement ».
+        /// </summary>
+        public void AddOutput(double recycled, double produced)
+        {
+            if (recycled > 0 && RecyclerKerbals > 0)
+            {
+                foreach (ModuleSKRecycler r in Recyclers)
+                    r.totalOutput += recycled * r.kerbalsServed / RecyclerKerbals;
+                foreach (var e in ProtoRecyclers)
+                    AddToSnapshot(e.ms, recycled * e.weight / RecyclerKerbals);
+            }
+            if (produced > 0 && GreenhouseFood > 0)
+            {
+                foreach (ModuleSKGreenhouse g in Greenhouses)
+                    g.totalOutput += produced * g.foodPerDay / GreenhouseFood;
+                foreach (var e in ProtoGreenhouses)
+                    AddToSnapshot(e.ms, produced * e.weight / GreenhouseFood);
+            }
+        }
+
+        private static void AddToSnapshot(ProtoPartModuleSnapshot ms, double amount)
+        {
+            if (ms.moduleValues == null)
+                return;
+            double total = 0;
+            ms.moduleValues.TryGetValue("totalOutput", ref total);
+            ms.moduleValues.SetValue("totalOutput", (total + amount).ToString("R"), true);
+        }
+
         public bool Any => RecyclerKerbals > 0 || GreenhouseFood > 0;
 
         private void Add(ModuleSKRecycler r)
@@ -155,12 +190,20 @@ namespace SanteKerbal
                     if (ms.moduleName == nameof(ModuleSKRecycler))
                     {
                         ModuleSKRecycler r = prefab.FindModuleImplementing<ModuleSKRecycler>();
-                        if (r != null) eq.Add(r);
+                        if (r != null)
+                        {
+                            eq.Add(r);
+                            eq.ProtoRecyclers.Add((ms, r.kerbalsServed));
+                        }
                     }
                     else
                     {
                         ModuleSKGreenhouse g = prefab.FindModuleImplementing<ModuleSKGreenhouse>();
-                        if (g != null) eq.Add(g);
+                        if (g != null)
+                        {
+                            eq.Add(g);
+                            eq.ProtoGreenhouses.Add((ms, g.foodPerDay));
+                        }
                     }
                 }
             }
