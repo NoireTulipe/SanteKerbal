@@ -1,0 +1,60 @@
+SantéKerbal 0.2.0 - par NoireTulipe (c)
+=======================================
+
+Un mod pour Kerbal Space Program 1.12 : tes Kerbals ont besoin de boire et de manger,
+craignent les fortes accélérations et la chaleur, peuvent tomber malades... et mourir.
+Pour les longs voyages, tu peux les plonger en hibernation.
+
+
+INSTALLATION
+------------
+1. Quitte Kerbal Space Program.
+2. Copie le dossier GameData de ce zip dans le dossier de KSP
+   (là où se trouve KSP_x64.exe). Accepte de fusionner avec le GameData existant.
+   Tu dois obtenir :
+       GameData/ModuleManager.4.2.3.dll
+       GameData/SanteKerbal/...
+3. Si tu as déjà un ModuleManager*.dll dans GameData, n'en garde qu'un seul.
+4. Lance le jeu.
+
+
+EN JEU
+------
+* La tablette : en vol, clique sur l'icône de la tablette dans la barre d'outils
+  (en bas à droite). Le Kerbal te tend sa tablette avec ses applications :
+    - Santé      : la vie et le cœur (électrocardiogramme) de chaque Kerbal
+    - Personnel  : qui est où, hibernation (Hiberner / Réveiller)
+    - Inventaire : eau, nourriture, autonomie en jours
+    - Serre, Recycleur : seulement si ton vaisseau en a
+    - Énergie    : batteries, courbe, déployer ou replier les panneaux solaires
+    - Temps      : avancer d'une heure, d'un jour... ou jusqu'au prochain événement
+    - Journal    : tout ce qui est arrivé à tes équipages
+  Une pastille rouge sur une icône = quelque chose ne va pas !
+
+* Les pièces (VAB, catégorie Utilitaire, ou tape « santekerbal » dans la recherche) :
+    - Module de vie SK-100       : réserve d'eau et de nourriture (100 jours pour 1 Kerbal)
+    - Recycleur d'eau SK-R3      : récupère 80 % de l'eau de 3 Kerbals (électricité)
+    - Serre hydroponique SK-G2   : produit de la nourriture (eau + électricité)
+    - Caisson d'hibernation SK-H2 : 2 places, les dormeurs ne mangent ni ne boivent
+                                    mais consomment beaucoup d'électricité
+  Toutes les capsules ont aussi une petite réserve de 2 jours.
+
+* Au VAB, l'icône de la tablette affiche l'autonomie du vaisseau que tu construis.
+
+* Les réglages : Échap > Paramètres de difficulté > onglet SantéKerbal
+  (Facile / Normal / Difficile, survie sans eau ou nourriture, G, chaleur,
+  hibernation, affichage du portrait d'un mort, moniteur cardiaque...).
+
+
+CONSEILS DE SURVIE
+------------------
+* Sans eau, un Kerbal meurt en 3 jours ; sans nourriture, en 3 semaines.
+  (Un « jour » de KSP dure 6 heures.)
+* Regarde l'autonomie AVANT de partir (tablette au VAB).
+* Les dormeurs en hibernation ont besoin de courant en permanence :
+  panneaux solaires ou RTG, et des batteries pour la nuit.
+* L'accélération du temps s'arrête toute seule en cas d'alerte.
+* Un Kerbal rentré à la base récupère sa santé tout seul.
+
+
+Bon vol, et prends soin de Jeb !

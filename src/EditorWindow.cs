@@ -12,7 +12,7 @@ namespace SanteKerbal
     [KSPAddon(KSPAddon.Startup.EditorAny, false)]
     public class EditorWindow : MonoBehaviour
     {
-        private const string IconUrl = "SanteKerbal/Icons/toolbar";
+        private const string IconUrl = "SanteKerbal/Textures/tablette/tablette-icone";
         private const int WindowId = 0x5A17F;
         private const float RefreshSeconds = 0.5f;
 

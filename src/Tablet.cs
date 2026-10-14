@@ -12,7 +12,7 @@ namespace SanteKerbal
     public partial class Tablet : MonoBehaviour
     {
         private const string TextureDir = "SanteKerbal/Textures/tablette/";
-        private const string IconUrl = "SanteKerbal/Icons/toolbar";
+        private const string IconUrl = "SanteKerbal/Textures/tablette/tablette-icone";
         private const string LockId = "SanteKerbal_Tablette";
         private const int WindowId = 0x5A180;
 

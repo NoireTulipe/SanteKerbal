@@ -7,3 +7,8 @@ GameData/SanteKerbal/Plugins/*.dll
 .vs/
 .vscode/
 *.user
+
+# Paquets prêts à installer
+release/
+# Préférences propres à chaque joueur
+GameData/SanteKerbal/PluginData/
