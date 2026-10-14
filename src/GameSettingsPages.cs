@@ -153,26 +153,26 @@ namespace SanteKerbal
     /// <summary>Colonne 3 : effets visuels et outils de test.</summary>
     public class SKDisplayParams : GameParameters.CustomParameterNode
     {
-        [GameParameters.CustomParameterUI("Dépérissement visible", toolTip = "Les Kerbals affaiblis pâlissent, penchent la tête et ralentissent.")]
+        [GameParameters.CustomParameterUI("Dépérissement visible", toolTip = "Les Kerbals affaiblis pâlissent, penchent la tête et ralentissent.\n(Réglage commun à toutes les parties.)")]
         public bool visualDecline = true;
 
         [GameParameters.CustomParameterUI("Portrait d'un mort",
-            toolTip = "Dépouille visible : on voit le corps.\nSignal perdu : portrait brouillé.\nSignal fantôme : brouillé, la dépouille apparaît par instants.")]
+            toolTip = "Dépouille visible : on voit le corps.\nSignal perdu : portrait brouillé.\nSignal fantôme : brouillé, la dépouille apparaît par instants.\n(Réglage commun à toutes les parties.)")]
         public string deathView = DeathViews.Label(Settings.Defaults.DeathPortrait);
 
-        [GameParameters.CustomParameterUI("Moniteur cardiaque", toolTip = "Électrocardiogramme de chaque Kerbal dans la fenêtre de vol.")]
+        [GameParameters.CustomParameterUI("Moniteur cardiaque", toolTip = "Électrocardiogramme de chaque Kerbal sur la tablette.\n(Réglage commun à toutes les parties.)")]
         public bool monitor = true;
 
-        [GameParameters.CustomParameterUI("Moniteur sur les portraits", toolTip = "Électrocardiogramme au-dessus du portrait de chaque Kerbal.")]
+        [GameParameters.CustomParameterUI("Moniteur sur les portraits", toolTip = "Électrocardiogramme au-dessus du portrait de chaque Kerbal.\n(Réglage commun à toutes les parties.)")]
         public bool portraitMonitor = true;
 
-        [GameParameters.CustomParameterUI("Sons du moniteur", toolTip = "Bip à chaque battement (fenêtre ouverte) et bip continu à la mort.")]
+        [GameParameters.CustomParameterUI("Sons du moniteur", toolTip = "Bip à chaque battement (tablette ouverte sur Santé) et bip continu à la mort.\n(Réglage commun à toutes les parties.)")]
         public bool monitorSound = true;
 
-        [GameParameters.CustomParameterUI("Courbe électrique", toolTip = "Charge des batteries et bilan électrique dans la fenêtre de vol.")]
+        [GameParameters.CustomParameterUI("Courbe électrique", toolTip = "Charge des batteries et bilan électrique sur la tablette.\n(Réglage commun à toutes les parties.)")]
         public bool powerGraph = true;
 
-        [GameParameters.CustomParameterUI("Outils de test", toolTip = "Boutons -20 / +20 / Tuer dans la fenêtre, export des textures.")]
+        [GameParameters.CustomParameterUI("Outils de test", toolTip = "Boutons -20 / +20 / Tuer sur la tablette, export des textures.\n(Propre à cette partie.)")]
         public bool debugTools = Settings.Defaults.DebugTools;
 
         public override string Title => "Affichage et tests";

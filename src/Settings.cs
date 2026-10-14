@@ -232,6 +232,8 @@ namespace SanteKerbal
             HeatEffects = danger.heatEffects;
             HeatThreshold = danger.heatThreshold;
 
+            // Préférences d'affichage : communes à toutes les parties, enregistrées aussitôt modifiées
+            DisplayPrefs.Sync(display);
             VisualDecline = display.visualDecline;
             Monitor = display.monitor;
             MonitorSound = display.monitorSound;
