@@ -423,8 +423,54 @@ namespace SanteKerbal
 
         #region Énergie
 
+        /// <summary>
+        /// Boutons « Déployer » / « Replier » les panneaux solaires du vaisseau : chacun n'apparaît
+        /// que s'il reste des panneaux à déployer (ou à replier). Les panneaux fixes ne sont pas comptés,
+        /// ni ceux qui ne se replient pas une fois ouverts (pour le bouton Replier).
+        /// </summary>
+        private void DrawSolarButtons(Vessel v)
+        {
+            var toExtend = new List<ModuleDeployableSolarPanel>();
+            var toRetract = new List<ModuleDeployableSolarPanel>();
+            int total = 0, broken = 0;
+            foreach (Part part in v.parts)
+                foreach (PartModule m in part.Modules)
+                {
+                    if (!(m is ModuleDeployableSolarPanel panel) || !panel.useAnimation)
+                        continue;
+                    total++;
+                    switch (panel.deployState)
+                    {
+                        case ModuleDeployablePart.DeployState.RETRACTED:
+                            toExtend.Add(panel);
+                            break;
+                        case ModuleDeployablePart.DeployState.EXTENDED:
+                            if (panel.retractable) toRetract.Add(panel);
+                            break;
+                        case ModuleDeployablePart.DeployState.BROKEN:
+                            broken++;
+                            break;
+                    }
+                }
+            if (total == 0)
+                return;
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"<b>Panneaux solaires</b> : {total}" + (broken > 0 ? $" <color=#ff8060>({broken} cassé(s))</color>" : ""), richLabel);
+            GUILayout.FlexibleSpace();
+            if (toExtend.Count > 0 && GUILayout.Button($"Déployer ({toExtend.Count})", smallButton, GUILayout.Width(U(130))))
+                foreach (ModuleDeployableSolarPanel panel in toExtend)
+                    panel.Extend();
+            if (toRetract.Count > 0 && GUILayout.Button($"Replier ({toRetract.Count})", smallButton, GUILayout.Width(U(130))))
+                foreach (ModuleDeployableSolarPanel panel in toRetract)
+                    panel.Retract();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(U(4));
+        }
+
         private void DrawPowerPage(Vessel v)
         {
+            DrawSolarButtons(v);
             if (!Settings.PowerGraph || !PowerHistory.HasData)
             {
                 GUILayout.Label(PowerHistory.HasData ? "Courbe électrique désactivée (menu de difficulté)." : "Pas de batterie à bord.");
