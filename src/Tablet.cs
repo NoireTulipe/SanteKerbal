@@ -4,9 +4,10 @@ using UnityEngine;
 namespace KerTech
 {
     /// <summary>
-    /// Tablette de bord : un Kerbal tient une tablette (dessin de NoireTulipe) dont l'écran affiche
-    /// l'interface du mod. Écran d'accueil avec des icônes, une page par sujet.
-    /// Ouverte par le bouton cœur de la barre d'outils, en vol.
+    /// Tablette KerTab : un Kerbal tient une tablette (dessin de NoireTulipe) dont l'écran affiche des
+    /// applications. Plateforme ouverte : les applications de KerTech comme celles d'autres mods
+    /// s'inscrivent dans le registre <see cref="KerTab"/> ; l'écran d'accueil montre leurs icônes.
+    /// Ouverte par le bouton tablette de la barre d'outils, en vol.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public partial class Tablet : MonoBehaviour
@@ -24,19 +25,62 @@ namespace KerTech
         private const float BaseWidth = 760f;
         private const float TopBarHeight = 26f;
 
-        private enum Page { Home, Health, Crew, Stocks, Greenhouse, Recycler, Power, Navigation, Time, Journal }
+        // Pages intégrées de KerTech (chacune inscrite comme application du registre KerTab)
+        private enum Page { Health, Crew, Stocks, Greenhouse, Recycler, Power, Navigation, Time, Journal }
 
-        private static readonly Page[] HomeIcons = { Page.Health, Page.Crew, Page.Stocks, Page.Greenhouse, Page.Recycler, Page.Power, Page.Navigation, Page.Time, Page.Journal };
+        public const string NavigationAppId = "kertech.navigation";
+        public const string HealthAppId = "kertech.sante";
 
-        /// <summary>Icônes de l'accueil : Serre et Recycleur seulement si le vaisseau en possède.</summary>
-        private static System.Collections.Generic.List<Page> VisibleIcons(Vessel v)
+        /// <summary>Application intégrée : une page de KerTech, dessinée par la tablette.</summary>
+        private class BuiltinApp : KerTabApp
         {
-            var list = new System.Collections.Generic.List<Page>();
-            foreach (Page p in HomeIcons)
-                if ((p != Page.Greenhouse && p != Page.Recycler) || EquipmentCount(v, p) > 0)
-                    list.Add(p);
-            return list;
+            public readonly Page Page;
+            private readonly string id, title, icon;
+            private readonly int order;
+
+            public BuiltinApp(Page page, string id, string title, string icon, int order)
+            {
+                Page = page; this.id = id; this.title = title; this.icon = TextureDir + icon; this.order = order;
+            }
+
+            public override string Id => id;
+            public override string Title => title;
+            public override string IconUrl => icon;
+            public override int Order => order;
+
+            // Serre et Recycleur : seulement si le vaisseau en possède
+            public override bool IsVisible(Vessel v) =>
+                (Page != Page.Greenhouse && Page != Page.Recycler) || EquipmentCount(v, Page) > 0;
+
+            public override int Badge(Vessel v) =>
+                Page == Page.Greenhouse || Page == Page.Recycler ? EquipmentCount(v, Page) : 0;
+
+            public override bool HasAlert(Vessel v) => Instance != null && Instance.HasAlert(Page, v);
+
+            public override void Draw(KerTabUI ui, Vessel v) => Instance?.DrawBuiltin(Page, v);
         }
+
+        /// <summary>Inscrit les applications de KerTech (une seule fois ; réinscrire remplace).</summary>
+        private static void RegisterBuiltins()
+        {
+            if (builtinsRegistered)
+                return;
+            builtinsRegistered = true;
+            KerTab.Register(new BuiltinApp(Page.Health, HealthAppId, "Santé", "sante", 100));
+            KerTab.Register(new BuiltinApp(Page.Crew, "kertech.personnel", "Personnel", "personnel", 200));
+            KerTab.Register(new BuiltinApp(Page.Stocks, "kertech.inventaire", "Inventaire", "inventaire", 300));
+            KerTab.Register(new BuiltinApp(Page.Greenhouse, "kertech.serre", "Serre", "serre", 400));
+            KerTab.Register(new BuiltinApp(Page.Recycler, "kertech.recycleur", "Recycleur", "recycleur-eau", 500));
+            KerTab.Register(new BuiltinApp(Page.Power, "kertech.energie", "Énergie", "energie", 600));
+            KerTab.Register(new BuiltinApp(Page.Navigation, NavigationAppId, "Navigation", "pilotage", 700));
+            KerTab.Register(new BuiltinApp(Page.Time, "kertech.temps", "Temps", "temps", 800));
+            KerTab.Register(new BuiltinApp(Page.Journal, "kertech.journal", "Journal", "journal", 900));
+        }
+
+        private static bool builtinsRegistered;
+
+        /// <summary>Tablette de la scène en cours (pour les applications intégrées).</summary>
+        private static Tablet Instance;
 
         /// <summary>Nombre de serres ou de recycleurs à bord (allumés ou non).</summary>
         private static int EquipmentCount(Vessel v, Page p)
@@ -59,10 +103,10 @@ namespace KerTech
 
         // Conservés pendant la session
         private static bool visible;
-        private static Page page = Page.Home;
+        private static KerTabApp current;   // application ouverte (null = écran d'accueil)
 
         /// <summary>La tablette est ouverte sur la page Navigation (le panneau lumineux est alors inutile).</summary>
-        public static bool ShowingNavigation => visible && page == Page.Navigation;
+        public static bool ShowingNavigation => visible && current != null && current.Id == NavigationAppId;
 
         private ApplicationLauncherButton button;
         private bool uiHidden;
@@ -70,7 +114,7 @@ namespace KerTech
         private Vector2 scroll;
 
         private Texture2D tabletTex, thumbTex, dotTex;
-        private readonly Texture2D[] iconTex = new Texture2D[10];
+        private readonly KerTabUI ui = new KerTabUI();
 
         private GUIStyle titleStyle, clockStyle, iconLabelStyle, smallButton, richLabel, barLabel, bpmLabel, sectionStyle;
 
@@ -84,6 +128,8 @@ namespace KerTech
             GameEvents.onShowUI.Add(OnShowUI);
             if (ApplicationLauncher.Ready)
                 AddButton();
+            Instance = this;
+            RegisterBuiltins();
             LoadTextures();
         }
 
@@ -98,6 +144,8 @@ namespace KerTech
             RemoveButton();
             SetLock(false);
             MonitorSystem.BeepEnabled = false;
+            if (Instance == this)
+                Instance = null;
         }
 
         private void OnHideUI() => uiHidden = true;
@@ -107,15 +155,6 @@ namespace KerTech
         {
             tabletTex = Load("tablette");
             thumbTex = Load("tablette_pouce");
-            iconTex[(int)Page.Health] = Load("sante");
-            iconTex[(int)Page.Crew] = Load("personnel");
-            iconTex[(int)Page.Stocks] = Load("inventaire");
-            iconTex[(int)Page.Greenhouse] = Load("serre");
-            iconTex[(int)Page.Recycler] = Load("recycleur-eau");
-            iconTex[(int)Page.Power] = Load("energie");
-            iconTex[(int)Page.Navigation] = Load("pilotage");
-            iconTex[(int)Page.Time] = Load("temps");
-            iconTex[(int)Page.Journal] = Load("journal");
             dotTex = MakeDot(32);
         }
 
@@ -176,7 +215,7 @@ namespace KerTech
         public void Update()
         {
             // Les bips ne sonnent que tablette ouverte sur la page Santé
-            MonitorSystem.BeepEnabled = visible && !uiHidden && page == Page.Health;
+            MonitorSystem.BeepEnabled = visible && !uiHidden && current != null && current.Id == HealthAppId;
             UpdateWarp();
         }
 
@@ -236,7 +275,7 @@ namespace KerTech
             DrawTopBar(screen.width);
             var content = new Rect(0, U(TopBarHeight), screen.width, screen.height - U(TopBarHeight));
             GUILayout.BeginArea(content);
-            if (page == Page.Home)
+            if (current == null)
                 DrawHome(content);
             else
                 DrawPage(content);
@@ -257,16 +296,16 @@ namespace KerTech
             GUI.color = old;
 
             GUILayout.BeginHorizontal(GUILayout.Height(bar));
-            if (page != Page.Home)
+            if (current != null)
             {
                 if (GUILayout.Button("<", smallButton, GUILayout.Width(U(30)), GUILayout.Height(bar - U(4))))
                 {
-                    page = Page.Home;
+                    current = null;
                     scroll = Vector2.zero;
                 }
             }
             Vessel v = FlightGlobals.ActiveVessel;
-            string title = page == Page.Home ? (v != null ? v.vesselName : "KerTab") : PageTitle(page);
+            string title = current == null ? (v != null ? v.vesselName : "KerTab") : current.Title;
             GUILayout.Label(title, titleStyle, GUILayout.Height(bar - U(2)));
             GUILayout.FlexibleSpace();
             GUILayout.Label(KSPUtil.PrintDateCompact(Planetarium.GetUniversalTime(), true), clockStyle, GUILayout.Height(bar - U(2)));
@@ -275,39 +314,25 @@ namespace KerTech
             GUILayout.EndHorizontal();
         }
 
-        private static string PageTitle(Page p)
-        {
-            switch (p)
-            {
-                case Page.Health: return "Santé";
-                case Page.Crew: return "Personnel";
-                case Page.Stocks: return "Inventaire";
-                case Page.Greenhouse: return "Serre";
-                case Page.Recycler: return "Recycleur";
-                case Page.Power: return "Énergie";
-                case Page.Navigation: return "Navigation";
-                case Page.Time: return "Temps";
-                case Page.Journal: return "Journal";
-                default: return "Accueil";
-            }
-        }
-
         /// <summary>
-        /// Écran d'accueil : icônes sur 3 colonnes (dernière ligne centrée), compteur si plusieurs
-        /// équipements du même type, pastille rouge en cas de problème.
+        /// Écran d'accueil : icônes des applications visibles sur 3 colonnes (dernière ligne centrée),
+        /// compteur éventuel, pastille rouge en cas de problème.
         /// </summary>
         private void DrawHome(Rect area)
         {
             const int cols = 3;
             Vessel v = FlightGlobals.ActiveVessel;
-            var icons = VisibleIcons(v);
+            var icons = new System.Collections.Generic.List<KerTabApp>();
+            foreach (KerTabApp app in KerTab.Apps)
+                if (SafeVisible(app, v))
+                    icons.Add(app);
             int rows = Mathf.Max(2, (icons.Count + cols - 1) / cols);
             float cellW = area.width / cols, cellH = area.height / rows;
             float icon = Mathf.Min(cellW, cellH - U(22)) * 0.72f;
 
             for (int i = 0; i < icons.Count; i++)
             {
-                Page p = icons[i];
+                KerTabApp p = icons[i];
                 int row = i / cols, col = i % cols;
                 int inRow = Mathf.Min(cols, icons.Count - row * cols);
                 float offset = (cols - inRow) * cellW / 2f;   // dernière ligne incomplète : centrée
@@ -323,12 +348,13 @@ namespace KerTech
                     GUI.DrawTexture(hit, Texture2D.whiteTexture);
                     GUI.color = old;
                 }
-                if (iconTex[(int)p] != null)
-                    GUI.DrawTexture(iconRect, iconTex[(int)p], ScaleMode.ScaleToFit);
-                GUI.Label(labelRect, PageTitle(p), iconLabelStyle);
+                Texture2D tex = KerTab.IconOf(p);
+                if (tex != null)
+                    GUI.DrawTexture(iconRect, tex, ScaleMode.ScaleToFit);
+                GUI.Label(labelRect, p.Title, iconLabelStyle);
 
-                // Compteur « x2 » quand il y a plusieurs serres ou recycleurs
-                int count = (p == Page.Greenhouse || p == Page.Recycler) ? EquipmentCount(v, p) : 0;
+                // Compteur « x2 » (par exemple plusieurs serres)
+                int count = SafeBadge(p, v);
                 if (count > 1)
                 {
                     float bw = U(30), bh = U(20);
@@ -340,7 +366,7 @@ namespace KerTech
                     GUI.Label(badge, "x" + count, barLabel);
                 }
 
-                if (v != null && HasAlert(p, v))
+                if (v != null && SafeAlert(p, v))
                 {
                     float d = icon * 0.22f;
                     Color old = GUI.color;
@@ -351,7 +377,7 @@ namespace KerTech
 
                 if (GUI.Button(hit, GUIContent.none, GUIStyle.none))
                 {
-                    page = p;
+                    current = p;
                     scroll = Vector2.zero;
                 }
             }
@@ -383,6 +409,40 @@ namespace KerTech
             barLabel = new GUIStyle(skin.label) { alignment = TextAnchor.MiddleCenter, wordWrap = false, fontStyle = FontStyle.Bold, normal = { textColor = Color.white } };
             bpmLabel = new GUIStyle(skin.label) { alignment = TextAnchor.MiddleRight, wordWrap = false, fontStyle = FontStyle.Bold };
             sectionStyle = new GUIStyle(skin.label) { richText = true, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.85f, 0.95f, 1f) } };
+
+            // Styles fournis aux applications (y compris celles d'autres mods)
+            ui.Scale = s;
+            ui.Label = skin.label;
+            ui.RichLabel = richLabel;
+            ui.Section = sectionStyle;
+            ui.Button = smallButton;
+        }
+
+        // Une application d'un autre mod ne doit jamais faire planter la tablette
+        private static readonly System.Collections.Generic.HashSet<string> reported = new System.Collections.Generic.HashSet<string>();
+
+        private static void Report(KerTabApp app, string what, System.Exception e)
+        {
+            if (reported.Add(app.Id + what))
+                Log.Error($"KerTab : erreur dans l'application « {app.Title} » ({app.Id}, {what}) : {e}");
+        }
+
+        private static bool SafeVisible(KerTabApp app, Vessel v)
+        {
+            try { return app.IsVisible(v); }
+            catch (System.Exception e) { Report(app, "IsVisible", e); return false; }
+        }
+
+        private static bool SafeAlert(KerTabApp app, Vessel v)
+        {
+            try { return app.HasAlert(v); }
+            catch (System.Exception e) { Report(app, "HasAlert", e); return false; }
+        }
+
+        private static int SafeBadge(KerTabApp app, Vessel v)
+        {
+            try { return app.Badge(v); }
+            catch (System.Exception e) { Report(app, "Badge", e); return 0; }
         }
 
         #endregion

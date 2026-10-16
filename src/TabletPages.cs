@@ -11,41 +11,57 @@ namespace KerTech
         // Échelle choisie pour la courbe électrique (conservée pendant la session)
         private static int powerScale;
 
+        /// <summary>Page de l'application ouverte, dans une zone défilante à la largeur de l'écran.</summary>
         private void DrawPage(Rect area)
         {
             Vessel v = FlightGlobals.ActiveVessel;
+            ui.Width = area.width - U(24);
             scroll = GUILayout.BeginScrollView(scroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar);
-            GUILayout.BeginVertical(GUILayout.Width(area.width - U(24)));
-            if (!Settings.Enabled)
+            GUILayout.BeginVertical(GUILayout.Width(ui.Width));
+            try
             {
-                GUILayout.Label("KerTech est désactivé pour cette partie.");
-                GUILayout.Label("(Échap > Paramètres de difficulté > onglet KerTech)");
+                current.Draw(ui, v);
             }
-            else if (v == null)
+            catch (System.Exception e)
             {
-                GUILayout.Label("Aucun vaisseau actif.");
-            }
-            else if (v.isEVA)
-            {
-                GUILayout.Label("Kerbal en EVA : non suivi pour l'instant.");
-            }
-            else
-            {
-                switch (page)
-                {
-                    case Page.Health: DrawHealthPage(v); break;
-                    case Page.Crew: DrawCrewPage(v); break;
-                    case Page.Stocks: DrawStocksPage(v); break;
-                    case Page.Greenhouse: DrawGreenhousePage(v); break;
-                    case Page.Recycler: DrawRecyclerPage(v); break;
-                    case Page.Power: DrawPowerPage(v); break;
-                    case Page.Navigation: DrawNavigationPage(v); break;
-                    case Page.Time: DrawTimePage(v); break;
-                    case Page.Journal: DrawJournalPage(); break;
-                }
+                Report(current, "Draw", e);
+                GUILayout.Label("<color=#ff8060>Cette application a rencontré une erreur (voir KSP.log).</color>", richLabel);
             }
             GUILayout.EndVertical();
             GUILayout.EndScrollView();
+        }
+
+        /// <summary>Pages intégrées de KerTech.</summary>
+        private void DrawBuiltin(Page page, Vessel v)
+        {
+            if (!Settings.Enabled && page != Page.Navigation && page != Page.Time)
+            {
+                GUILayout.Label("KerTech est désactivé pour cette partie.");
+                GUILayout.Label("(Échap > Paramètres de difficulté > onglet KerTech)");
+                return;
+            }
+            if (v == null)
+            {
+                GUILayout.Label("Aucun vaisseau actif.");
+                return;
+            }
+            if (v.isEVA && page != Page.Time && page != Page.Journal)
+            {
+                GUILayout.Label("Kerbal en EVA : non suivi pour l'instant.");
+                return;
+            }
+            switch (page)
+            {
+                case Page.Health: DrawHealthPage(v); break;
+                case Page.Crew: DrawCrewPage(v); break;
+                case Page.Stocks: DrawStocksPage(v); break;
+                case Page.Greenhouse: DrawGreenhousePage(v); break;
+                case Page.Recycler: DrawRecyclerPage(v); break;
+                case Page.Power: DrawPowerPage(v); break;
+                case Page.Navigation: DrawNavigationPage(v); break;
+                case Page.Time: DrawTimePage(v); break;
+                case Page.Journal: DrawJournalPage(); break;
+            }
         }
 
         #region Alertes de l'écran d'accueil
