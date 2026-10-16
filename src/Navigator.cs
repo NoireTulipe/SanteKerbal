@@ -4,11 +4,12 @@ using UnityEngine;
 namespace SanteKerbal
 {
     /// <summary>
-    /// Pilote automatique de l'application Navigation de la tablette, assistant de mise en orbite :
-    /// montée verticale (SAS « Stabiliser », qui garde la fusée droite) jusqu'à l'apoapside visée,
-    /// croisière jusqu'à la sortie de l'atmosphère, puis circularisation à l'apoapside avec un nœud de
-    /// manœuvre et les modes natifs du SAS (Manœuvre, sinon Prograde). Le joueur gère les étages et peut
-    /// annuler à tout moment. Les gaz passent par la manette du jeu.
+    /// Pilote automatique de l'application Navigation de la tablette, assistant de mise en orbite.
+    /// Virage gravitationnel classique : montée droite (SAS « Stabiliser ») jusqu'à navKickSpeed,
+    /// petit basculement de navKickAngle degrés vers l'est, puis SAS natif « Prograde » : la fusée suit
+    /// sa trajectoire sans jamais se présenter de biais au vent, et la gravité la couche progressivement.
+    /// Coupure à l'apoapside visée, croisière hors de l'atmosphère, puis circularisation à l'apoapside
+    /// (nœud de manœuvre, SAS natif Manœuvre ou Prograde). Le joueur gère les étages et peut annuler.
     /// </summary>
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class Navigator : MonoBehaviour
@@ -20,6 +21,11 @@ namespace SanteKerbal
         public static double TargetAltitude = -1;    // m ; -1 = valeur proposée selon le corps céleste
 
         private static Guid vesselId;
+
+        // Étapes de la montée : droite, basculement, virage naturel
+        private enum Climb { Vertical, Kick, Turn }
+        private static Climb climb;
+        private static float kickStart;
         private static ManeuverNode node;
         private static bool warpedToNode;
 
@@ -36,6 +42,7 @@ namespace SanteKerbal
             if (TargetAltitude <= 0) TargetAltitude = DefaultAltitude(v);
             vesselId = v.id;
             Current = Phase.Ascent;
+            climb = Climb.Vertical;
             SetThrottle(1f);   // pleins gaz : la fusée part à pleine puissance dès l'allumage
             Log.Info($"Navigation : assistant de mise en orbite démarré, orbite visée {TargetAltitude / 1000:F0} km");
         }
@@ -92,8 +99,6 @@ namespace SanteKerbal
 
         private static void Ascent(Vessel v)
         {
-            // « Stabiliser » garde l'orientation du moment : la fusée reste droite comme sur le pas de tir
-            NativeMode(v, VesselAutopilot.AutopilotMode.StabilityAssist);
             double apo = v.orbit.ApA;
             if (apo >= TargetAltitude)
             {
@@ -102,16 +107,51 @@ namespace SanteKerbal
                 Status = "Apoapside atteinte : moteurs coupés, croisière vers l'espace";
                 return;
             }
-            Status = v.ctrlState.mainThrottle < 0.01f
-                ? "Montée : mets les gaz !"
-                : $"Montée verticale : apoapside {apo / 1000:F1} / {TargetAltitude / 1000:F0} km";
+            if (v.ctrlState.mainThrottle < 0.01f && climb == Climb.Vertical)
+                Status = "Montée : mets les gaz !";
+
+            Vector3d up = (v.CoMD - v.mainBody.position).normalized;
+            float tilt = Vector3.Angle(v.ReferenceTransform.up, (Vector3)up);   // écart à la verticale
+            switch (climb)
+            {
+                case Climb.Vertical:
+                    // Droite comme sur le pas de tir, jusqu'à avoir un peu de vitesse
+                    NativeMode(v, VesselAutopilot.AutopilotMode.StabilityAssist);
+                    if (v.srfSpeed >= Settings.NavKickSpeed && v.altitude > 200)
+                    {
+                        climb = Climb.Kick;
+                        kickStart = Time.time;
+                    }
+                    else if (v.ctrlState.mainThrottle >= 0.01f)
+                        Status = $"Montée droite : {v.srfSpeed:F0} / {Settings.NavKickSpeed:F0} m/s";
+                    break;
+
+                case Climb.Kick:
+                    // Petit basculement doux vers l'est (le seul moment où l'on oriente nous-mêmes)
+                    // On tient l'angle jusqu'à ce que la TRAJECTOIRE se soit inclinée à son tour : passer en
+                    // Prograde trop tôt redresserait la fusée sur sa trajectoire encore verticale.
+                    PointTo(v, East(v, 90f - (float)Settings.NavKickAngle));
+                    float pathTilt = Vector3.Angle((Vector3)v.srf_velocity.normalized, (Vector3)up);
+                    Status = $"Basculement vers l'est : nez {tilt:F0}°, trajectoire {pathTilt:F0} / {Settings.NavKickAngle:F0}°";
+                    if (pathTilt >= Settings.NavKickAngle * 0.75 || Time.time - kickStart > 25f)
+                        climb = Climb.Turn;
+                    break;
+
+                case Climb.Turn:
+                    // Virage naturel : le SAS suit la trajectoire, la gravité couche la fusée
+                    if (!NativeMode(v, VesselAutopilot.AutopilotMode.Prograde))
+                        PointTo(v, v.srf_velocity.normalized);
+                    Status = $"Virage : inclinaison {90 - tilt:F0}° au-dessus de l'horizon, apoapside {apo / 1000:F1} / {TargetAltitude / 1000:F0} km";
+                    break;
+            }
         }
 
-        /// <summary>Croisière (toujours droit) jusqu'à la sortie de l'atmosphère, en compensant la traînée.</summary>
+        /// <summary>Croisière jusqu'à la sortie de l'atmosphère, nez sur la trajectoire, en compensant la traînée.</summary>
         private static void Coast(Vessel v)
         {
             CelestialBody b = v.mainBody;
-            NativeMode(v, VesselAutopilot.AutopilotMode.StabilityAssist);
+            if (!NativeMode(v, VesselAutopilot.AutopilotMode.Prograde))
+                NativeMode(v, VesselAutopilot.AutopilotMode.StabilityAssist);
             bool inAtmo = b.atmosphere && v.altitude < b.atmosphereDepth;
             if (inAtmo)
             {
@@ -226,6 +266,19 @@ namespace SanteKerbal
         #endregion
 
         #region Outils
+
+        /// <summary>Direction vers l'est, inclinée de `pitch` degrés au-dessus de l'horizon.</summary>
+        private static Vector3d East(Vessel v, float pitch)
+        {
+            Vector3d up = (v.CoMD - v.mainBody.position).normalized;
+            // Est = sens de rotation du sol (vitesse du sol au point du vaisseau), ramené à l'horizontale
+            Vector3d east = Vector3d.Exclude(up, v.mainBody.getRFrmVel(v.CoMD));
+            if (east.sqrMagnitude < 1e-6)
+                east = Vector3d.Exclude(up, v.mainBody.transform.right);
+            east = east.normalized;
+            double p = pitch * Math.PI / 180.0;
+            return (east * Math.Cos(p) + up * Math.Sin(p)).normalized;
+        }
 
         /// <summary>
         /// Active le SAS dans un mode natif de KSP s'il est disponible (niveau du pilote ou de la sonde).

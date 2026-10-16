@@ -59,6 +59,10 @@ namespace SanteKerbal
         // (ombre de la planète comprise) ; les panneaux fixes produisent la moitié
         public static double UnloadedSolarFactor = 0.6;
 
+        // Assistant de mise en orbite : vitesse et angle du basculement vers l'est
+        public static double NavKickSpeed = 80;
+        public static double NavKickAngle = 8;
+
         // Tolérance avant de déclarer une panne d'électricité (minutes de consommation de survie)
         public static double PowerGraceMinutes = 60;
         // Arrêter l'accélération du temps lors d'une alerte (panne, manque, santé critique, mort)
@@ -167,6 +171,8 @@ namespace SanteKerbal
             n.TryGetValue("cryoUnpoweredDamagePerDay", ref CryoUnpoweredDamagePerDay);
             n.TryGetValue("unloadedSolarFactor", ref UnloadedSolarFactor);
             n.TryGetValue("powerGraceMinutes", ref PowerGraceMinutes);
+            n.TryGetValue("navKickSpeed", ref NavKickSpeed);
+            n.TryGetValue("navKickAngle", ref NavKickAngle);
             n.TryGetValue("stopWarpOnAlert", ref StopWarpOnAlert);
             n.TryGetValue("debugLogInterval", ref DebugLogInterval);
             n.TryGetValue("debugTools", ref DebugTools);
