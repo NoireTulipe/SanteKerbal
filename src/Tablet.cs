@@ -75,6 +75,7 @@ namespace KerTech
             KerTab.Register(new BuiltinApp(Page.Navigation, NavigationAppId, "Navigation", "pilotage", 700));
             KerTab.Register(new BuiltinApp(Page.Time, "kertech.temps", "Temps", "temps", 800));
             KerTab.Register(new BuiltinApp(Page.Journal, "kertech.journal", "Journal", "journal", 900));
+            KerTab.Register(new ShortcutsApp());
         }
 
         private static bool builtinsRegistered;

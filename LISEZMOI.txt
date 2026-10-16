@@ -32,6 +32,8 @@ EN JEU
                    tout seul, coupe les moteurs puis arrondit l'orbite ; toi, tu sépares les étages)
     - Temps      : avancer d'une heure, d'un jour... ou jusqu'au prochain événement
     - Journal    : tout ce qui est arrivé à tes équipages
+    - Raccourcis : les boutons des autres mods de la barre d'outils, rassemblés sur la tablette
+  D'autres mods peuvent ajouter leurs propres applications à la tablette.
   Une pastille rouge sur une icône = quelque chose ne va pas !
 
 * Les pièces (VAB, catégorie Utilitaire, ou tape « kertech » dans la recherche) :
