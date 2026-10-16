@@ -1,7 +1,7 @@
 using KSP.UI.Screens;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Tablette de bord : un Kerbal tient une tablette (dessin de NoireTulipe) dont l'écran affiche
@@ -11,9 +11,9 @@ namespace SanteKerbal
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public partial class Tablet : MonoBehaviour
     {
-        private const string TextureDir = "SanteKerbal/Textures/tablette/";
-        private const string IconUrl = "SanteKerbal/Textures/tablette/tablette-icone";
-        private const string LockId = "SanteKerbal_Tablette";
+        private const string TextureDir = "KerTech/KerTab/Textures/";
+        private const string IconUrl = "KerTech/KerTab/Textures/tablette-icone";
+        private const string LockId = "KerTech_Tablette";
         private const int WindowId = 0x5A180;
 
         // Image de la tablette (1024 x 765) et position de son écran dans l'image (tools/tablet_screen.py)
@@ -266,7 +266,7 @@ namespace SanteKerbal
                 }
             }
             Vessel v = FlightGlobals.ActiveVessel;
-            string title = page == Page.Home ? (v != null ? v.vesselName : "SantéKerbal") : PageTitle(page);
+            string title = page == Page.Home ? (v != null ? v.vesselName : "KerTab") : PageTitle(page);
             GUILayout.Label(title, titleStyle, GUILayout.Height(bar - U(2)));
             GUILayout.FlexibleSpace();
             GUILayout.Label(KSPUtil.PrintDateCompact(Planetarium.GetUniversalTime(), true), clockStyle, GUILayout.Height(bar - U(2)));

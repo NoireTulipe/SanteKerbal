@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Santé de l'équipage d'un vaisseau chargé (à portée physique) :

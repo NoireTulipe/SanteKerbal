@@ -1,11 +1,11 @@
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
-    /// <summary>Messages préfixés [SanteKerbal] pour les retrouver facilement dans KSP.log.</summary>
+    /// <summary>Messages préfixés [KerTech] pour les retrouver facilement dans KSP.log.</summary>
     internal static class Log
     {
-        private const string Prefix = "[SanteKerbal] ";
+        private const string Prefix = "[KerTech] ";
 
         public static void Info(string message) => Debug.Log(Prefix + message);
         public static void Warning(string message) => Debug.LogWarning(Prefix + message);

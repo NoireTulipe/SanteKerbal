@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Hibernation : un Kerbal endormi dans un caisson ne mange ni ne boit, sa santé est figée,

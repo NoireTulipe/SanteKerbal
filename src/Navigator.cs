@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Pilote automatique de l'application Navigation de la tablette, assistant de mise en orbite.

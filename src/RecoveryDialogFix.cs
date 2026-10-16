@@ -1,7 +1,7 @@
 using KSP.UI.Screens.SpaceCenter.MissionSummaryDialog;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Récapitulatif de fin de mission : KSP affiche « Récupéré » pour tout l'équipage, y compris nos

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Fait battre les moniteurs cardiaques de l'équipage du vaisseau actif, à chaque image.

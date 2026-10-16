@@ -1,6 +1,6 @@
 using System;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>État de santé d'un Kerbal, sauvegardé dans la partie par HealthScenario.</summary>
     public class KerbalHealth

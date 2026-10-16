@@ -3,7 +3,7 @@ using KSP.UI;
 using KSP.UI.Screens;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Dans le VAB et le SPH : bouton de barre d'outils et fenêtre montrant les stocks d'eau et de
@@ -12,7 +12,7 @@ namespace SanteKerbal
     [KSPAddon(KSPAddon.Startup.EditorAny, false)]
     public class EditorWindow : MonoBehaviour
     {
-        private const string IconUrl = "SanteKerbal/Textures/tablette/tablette-icone";
+        private const string IconUrl = "KerTech/KerTab/Textures/tablette-icone";
         private const int WindowId = 0x5A17F;
         private const float RefreshSeconds = 0.5f;
 
@@ -122,13 +122,13 @@ namespace SanteKerbal
             if (!visible)
                 return;
             GUI.skin = HighLogic.Skin;
-            windowRect = GUILayout.Window(WindowId, windowRect, DrawWindow, "SantéKerbal : conception", GUILayout.Width(360));
+            windowRect = GUILayout.Window(WindowId, windowRect, DrawWindow, "KerTab : conception", GUILayout.Width(360));
         }
 
         private void DrawWindow(int id)
         {
             if (!Settings.Enabled)
-                GUILayout.Label("SantéKerbal est désactivé pour cette partie : les stocks sont indicatifs.");
+                GUILayout.Label("KerTech est désactivé pour cette partie : les stocks sont indicatifs.");
             if (seats == 0)
             {
                 GUILayout.Label("Aucune place habitable sur ce vaisseau.");

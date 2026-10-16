@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Préférences d'affichage communes à toutes les parties (goûts du joueur, pas règles du jeu) :
@@ -25,7 +25,7 @@ namespace SanteKerbal
         private static string snapshot;
 
         private static string PrefsPath =>
-            Path.Combine(KSPUtil.ApplicationRootPath, "GameData/SanteKerbal/PluginData/preferences.cfg");
+            Path.Combine(KSPUtil.ApplicationRootPath, "GameData/KerTech/PluginData/preferences.cfg");
 
         private static string Snapshot() =>
             $"{VisualDecline}|{DeathView}|{Monitor}|{PortraitMonitor}|{MonitorSound}|{PowerGraph}";
@@ -111,7 +111,7 @@ namespace SanteKerbal
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(PrefsPath));
-                var n = new ConfigNode("SANTEKERBAL_PREFERENCES");
+                var n = new ConfigNode("KERTECH_PREFERENCES");
                 n.AddValue("visualDecline", VisualDecline);
                 n.AddValue("deathView", DeathView);
                 n.AddValue("monitor", Monitor);

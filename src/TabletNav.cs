@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Application Navigation de la tablette : SAS, gaz, assistant de mise en orbite.</summary>
     public partial class Tablet

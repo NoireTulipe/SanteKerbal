@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Applications Temps (accélération du temps) et Journal de bord de la tablette.</summary>
     public partial class Tablet

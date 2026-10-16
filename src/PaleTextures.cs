@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Versions blafardes des textures de peau, générées à la demande et mises en cache.
@@ -19,10 +19,10 @@ namespace SanteKerbal
         private static readonly HashSet<int> failed = new HashSet<int>();
         private static readonly HashSet<string> exported = new HashSet<string>();
 
-        // Texture « mort » personnalisée : GameData/SanteKerbal/Textures/<nom>_mort.png
-        private const string CustomDeadUrl = "SanteKerbal/Textures/{0}_mort";
-        // Exports pour dessiner : dossier SanteKerbal_Export à la racine de KSP (hors GameData)
-        private const string ExportFolder = "SanteKerbal_Export";
+        // Texture « mort » personnalisée : GameData/KerTech/VieABord/Textures/<nom>_mort.png
+        private const string CustomDeadUrl = "KerTech/VieABord/Textures/{0}_mort";
+        // Exports pour dessiner : dossier KerTech_Export à la racine de KSP (hors GameData)
+        private const string ExportFolder = "KerTech_Export";
 
         /// <summary>Texture de niveau donné, ou null si la texture n'a pas pu être copiée.</summary>
         public static Texture2D Get(Texture2D source, int level)
@@ -72,7 +72,7 @@ namespace SanteKerbal
 
             tex = new Texture2D(source.width, source.height, TextureFormat.RGBA32, true)
             {
-                name = source.name + "_SanteKerbal" + level,
+                name = source.name + "_KerTech" + level,
                 wrapMode = source.wrapMode,
                 filterMode = source.filterMode,
                 anisoLevel = source.anisoLevel

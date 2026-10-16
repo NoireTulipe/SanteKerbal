@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Accès aux ressources d'un vaisseau, chargé ou non.</summary>
     internal interface IVesselStore

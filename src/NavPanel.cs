@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Panneau lumineux de l'assistant de vol : en haut de l'écran, façon tableau de bord (fond sombre,

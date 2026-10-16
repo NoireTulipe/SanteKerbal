@@ -1,6 +1,6 @@
 using System;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Électricité d'un vaisseau non chargé, que KSP ne simule pas : production estimée des panneaux

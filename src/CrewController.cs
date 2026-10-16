@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using KSP.UI.Screens.Flight;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// En vol : apparence des Kerbals de l'IVA selon leur santé, et règles pour les morts

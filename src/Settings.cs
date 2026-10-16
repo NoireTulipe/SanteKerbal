@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Ce que montre le portrait d'un Kerbal mort.</summary>
     public enum DeathView
@@ -33,14 +33,14 @@ namespace SanteKerbal
     }
 
     /// <summary>
-    /// Réglages lus dans GameData/SanteKerbal/SanteKerbal.cfg (nœud SANTEKERBAL_SETTINGS).
+    /// Réglages lus dans GameData/KerTech/KerTech.cfg (nœud KERTECH_SETTINGS).
     /// Les valeurs ci-dessous sont les valeurs par défaut si le fichier ou une clé manque.
     /// Les principaux réglages sont ensuite remplacés par ceux de la partie en cours
-    /// (paramètres de difficulté, onglet SantéKerbal) : voir ApplyGame.
+    /// (paramètres de difficulté, onglet KerTech) : voir ApplyGame.
     /// </summary>
     internal static class Settings
     {
-        public const string NodeName = "SANTEKERBAL_SETTINGS";
+        public const string NodeName = "KERTECH_SETTINGS";
 
         // Interrupteurs (réglables par partie)
         public static bool Enabled = true;

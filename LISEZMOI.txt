@@ -1,5 +1,6 @@
-SantéKerbal 0.2.0 - par NoireTulipe (c)
-=======================================
+KerTech 0.3.0 - by NoireTulipe (c)
+==================================
+La tablette de bord KerTab et la vie à bord de tes Kerbals.
 
 Un mod pour Kerbal Space Program 1.12 : tes Kerbals ont besoin de boire et de manger,
 craignent les fortes accélérations et la chaleur, peuvent tomber malades... et mourir.
@@ -13,14 +14,14 @@ INSTALLATION
    (là où se trouve KSP_x64.exe). Accepte de fusionner avec le GameData existant.
    Tu dois obtenir :
        GameData/ModuleManager.4.2.3.dll
-       GameData/SanteKerbal/...
+       GameData/KerTech/...
 3. Si tu as déjà un ModuleManager*.dll dans GameData, n'en garde qu'un seul.
 4. Lance le jeu.
 
 
 EN JEU
 ------
-* La tablette : en vol, clique sur l'icône de la tablette dans la barre d'outils
+* La tablette : en vol, clique sur l'icône de la tablette KerTab dans la barre d'outils
   (en bas à droite). Le Kerbal te tend sa tablette avec ses applications :
     - Santé      : la vie et le cœur (électrocardiogramme) de chaque Kerbal
     - Personnel  : qui est où, hibernation (Hiberner / Réveiller)
@@ -33,7 +34,7 @@ EN JEU
     - Journal    : tout ce qui est arrivé à tes équipages
   Une pastille rouge sur une icône = quelque chose ne va pas !
 
-* Les pièces (VAB, catégorie Utilitaire, ou tape « santekerbal » dans la recherche) :
+* Les pièces (VAB, catégorie Utilitaire, ou tape « kertech » dans la recherche) :
     - Module de vie SK-100       : réserve d'eau et de nourriture (100 jours pour 1 Kerbal)
     - Recycleur d'eau SK-R3      : récupère 80 % de l'eau de 3 Kerbals (électricité)
     - Serre hydroponique SK-G2   : produit de la nourriture (eau + électricité)
@@ -43,7 +44,7 @@ EN JEU
 
 * Au VAB, l'icône de la tablette affiche l'autonomie du vaisseau que tu construis.
 
-* Les réglages : Échap > Paramètres de difficulté > onglet SantéKerbal
+* Les réglages : Échap > Paramètres de difficulté > onglet KerTech
   (Facile / Normal / Difficile, survie sans eau ou nourriture, G, chaleur,
   hibernation, affichage du portrait d'un mort, moniteur cardiaque...).
 

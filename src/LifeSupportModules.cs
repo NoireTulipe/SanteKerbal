@@ -1,4 +1,4 @@
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Base commune du recycleur et de la serre : un équipement de survie qu'on allume ou éteint.
@@ -47,7 +47,7 @@ namespace SanteKerbal
 
     /// <summary>
     /// Caisson d'hibernation : ses occupants peuvent être endormis (voir Hibernation).
-    /// Les réglages (électricité, réveil) sont dans SanteKerbal.cfg.
+    /// Les réglages (électricité, réveil) sont dans KerTech.cfg.
     /// </summary>
     public class ModuleSKCryoPod : PartModule
     {

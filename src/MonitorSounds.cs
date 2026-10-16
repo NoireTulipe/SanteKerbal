@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Sons du moniteur cardiaque, générés par programme (aucun fichier audio) :
@@ -23,8 +23,8 @@ namespace SanteKerbal
             source = gameObject.AddComponent<AudioSource>();
             source.spatialBlend = 0f;      // son « dans la tête », pas positionné en 3D
             source.playOnAwake = false;
-            beep = Tone("SanteKerbal_bip", 0.08f);
-            flatline = Tone("SanteKerbal_flatline", 2.5f);
+            beep = Tone("KerTech_bip", 0.08f);
+            flatline = Tone("KerTech_flatline", 2.5f);
             Mortality.Killed += OnKilled;
         }
 

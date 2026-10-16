@@ -1,4 +1,4 @@
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Mort d'un Kerbal : il reste à bord, ne peut plus piloter, et n'est déclaré

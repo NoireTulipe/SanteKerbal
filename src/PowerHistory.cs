@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Historique de la charge électrique du vaisseau actif, pour la courbe de la fenêtre de santé.

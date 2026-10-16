@@ -1,15 +1,15 @@
 using System.Reflection;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
-    /// Onglet « SantéKerbal » des paramètres de difficulté : réglages propres à chaque partie.
-    /// Les valeurs initiales viennent de SanteKerbal.cfg (préréglage « Normal »).
+    /// Onglet « KerTech » des paramètres de difficulté : réglages propres à chaque partie.
+    /// Les valeurs initiales viennent de KerTech.cfg (préréglage « Normal »).
     /// </summary>
     internal static class SKSection
     {
-        public const string Id = "SanteKerbal";
-        public const string Display = "SantéKerbal";
+        public const string Id = "KerTech";
+        public const string Display = "KerTech";
 
         public static bool ModEnabled(GameParameters parameters)
         {

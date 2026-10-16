@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Moniteur cardiaque d'un Kerbal : pouls calculé à partir de son état (G, chaleur, manques, santé)

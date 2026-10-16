@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Bloc « stocks, équipements, autonomie », commun à la fenêtre de vol et à celle de l'éditeur.</summary>
     internal static class SupplyPanel

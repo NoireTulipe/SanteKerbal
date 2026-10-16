@@ -1,4 +1,4 @@
-"""Outils communs pour construire les pièces de SantéKerbal dans Blender et les exporter en .mu.
+"""Outils communs pour construire les pièces de KerTech dans Blender et les exporter en .mu.
 
 Utilisé par build_caisson.py, build_serre.py et build_recycleur.py. En Blender, l'axe vertical est Z ;
 le module d'export (io_object_mu) le convertit en Y pour KSP.

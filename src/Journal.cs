@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Une ligne du journal de bord.</summary>
     public class JournalEntry

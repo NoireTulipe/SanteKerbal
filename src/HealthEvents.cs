@@ -1,4 +1,4 @@
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Messages de santé (log + écran), communs aux vaisseaux chargés et non chargés.</summary>
     internal static class HealthEvents

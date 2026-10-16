@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Pages de la tablette : Santé, Personnel, Inventaire, Serre, Recycleur, Énergie.</summary>
     public partial class Tablet
@@ -18,8 +18,8 @@ namespace SanteKerbal
             GUILayout.BeginVertical(GUILayout.Width(area.width - U(24)));
             if (!Settings.Enabled)
             {
-                GUILayout.Label("SantéKerbal est désactivé pour cette partie.");
-                GUILayout.Label("(Échap > Paramètres de difficulté > onglet SantéKerbal)");
+                GUILayout.Label("KerTech est désactivé pour cette partie.");
+                GUILayout.Label("(Échap > Paramètres de difficulté > onglet KerTech)");
             }
             else if (v == null)
             {

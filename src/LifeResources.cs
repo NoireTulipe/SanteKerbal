@@ -1,11 +1,11 @@
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>Noms des ressources du mod et vérification de leur présence au chargement.</summary>
     internal static class LifeResources
     {
-        public const string Water = "SanteKerbal_Eau";
-        public const string Food = "SanteKerbal_Nourriture";
-        public const string LifeModulePart = "SanteKerbal_ModuleVie";
+        public const string Water = "KerTech_Eau";
+        public const string Food = "KerTech_Nourriture";
+        public const string LifeModulePart = "KerTech_ModuleVie";
 
         /// <summary>Quantité et capacité totales d'une ressource dans un vaisseau chargé.</summary>
         public static void GetTotals(Vessel vessel, string resource, out double amount, out double maxAmount)
@@ -24,7 +24,7 @@ namespace SanteKerbal
             {
                 PartResourceDefinition def = PartResourceLibrary.Instance.GetDefinition(name);
                 if (def == null)
-                    Log.Error("Ressource " + name + " introuvable : le fichier Resources/SanteKerbal_Resources.cfg n'a pas été lu.");
+                    Log.Error("Ressource " + name + " introuvable : le fichier Resources/KerTech_Resources.cfg n'a pas été lu.");
                 else
                     Log.Info("Ressource " + name + " trouvée (id=" + def.id + ", densité=" + def.density + ")");
             }

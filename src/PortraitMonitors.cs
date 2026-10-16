@@ -2,7 +2,7 @@ using KSP.UI;
 using KSP.UI.Screens.Flight;
 using UnityEngine;
 
-namespace SanteKerbal
+namespace KerTech
 {
     /// <summary>
     /// Électrocardiogramme dessiné juste au-dessus de chaque portrait (en bas à droite).

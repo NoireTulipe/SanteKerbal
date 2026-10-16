@@ -2,7 +2,7 @@
 src/bin/
 src/obj/
 # DLL copiée par le build (régénérée à chaque compilation)
-GameData/SanteKerbal/Plugins/*.dll
+GameData/KerTech/Plugins/*.dll
 # Éditeurs
 .vs/
 .vscode/
@@ -11,4 +11,4 @@ GameData/SanteKerbal/Plugins/*.dll
 # Paquets prêts à installer
 release/
 # Préférences propres à chaque joueur
-GameData/SanteKerbal/PluginData/
+GameData/KerTech/PluginData/
