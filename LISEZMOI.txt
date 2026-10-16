@@ -27,6 +27,8 @@ EN JEU
     - Inventaire : eau, nourriture, autonomie en jours
     - Serre, Recycleur : seulement si ton vaisseau en a
     - Énergie    : batteries, courbe, déployer ou replier les panneaux solaires
+    - Navigation : SAS, gaz, et l'assistant de mise en orbite (il penche la fusée
+                   tout seul, coupe les moteurs puis arrondit l'orbite ; toi, tu sépares les étages)
     - Temps      : avancer d'une heure, d'un jour... ou jusqu'au prochain événement
     - Journal    : tout ce qui est arrivé à tes équipages
   Une pastille rouge sur une icône = quelque chose ne va pas !

@@ -24,9 +24,9 @@ namespace SanteKerbal
         private const float BaseWidth = 760f;
         private const float TopBarHeight = 26f;
 
-        private enum Page { Home, Health, Crew, Stocks, Greenhouse, Recycler, Power, Time, Journal }
+        private enum Page { Home, Health, Crew, Stocks, Greenhouse, Recycler, Power, Navigation, Time, Journal }
 
-        private static readonly Page[] HomeIcons = { Page.Health, Page.Crew, Page.Stocks, Page.Greenhouse, Page.Recycler, Page.Power, Page.Time, Page.Journal };
+        private static readonly Page[] HomeIcons = { Page.Health, Page.Crew, Page.Stocks, Page.Greenhouse, Page.Recycler, Page.Power, Page.Navigation, Page.Time, Page.Journal };
 
         /// <summary>Icônes de l'accueil : Serre et Recycleur seulement si le vaisseau en possède.</summary>
         private static System.Collections.Generic.List<Page> VisibleIcons(Vessel v)
@@ -67,7 +67,7 @@ namespace SanteKerbal
         private Vector2 scroll;
 
         private Texture2D tabletTex, thumbTex, dotTex;
-        private readonly Texture2D[] iconTex = new Texture2D[9];
+        private readonly Texture2D[] iconTex = new Texture2D[10];
 
         private GUIStyle titleStyle, clockStyle, iconLabelStyle, smallButton, richLabel, barLabel, bpmLabel, sectionStyle;
 
@@ -110,6 +110,7 @@ namespace SanteKerbal
             iconTex[(int)Page.Greenhouse] = Load("serre");
             iconTex[(int)Page.Recycler] = Load("recycleur-eau");
             iconTex[(int)Page.Power] = Load("energie");
+            iconTex[(int)Page.Navigation] = Load("pilotage");
             iconTex[(int)Page.Time] = Load("temps");
             iconTex[(int)Page.Journal] = Load("journal");
             dotTex = MakeDot(32);
@@ -281,6 +282,7 @@ namespace SanteKerbal
                 case Page.Greenhouse: return "Serre";
                 case Page.Recycler: return "Recycleur";
                 case Page.Power: return "Énergie";
+                case Page.Navigation: return "Navigation";
                 case Page.Time: return "Temps";
                 case Page.Journal: return "Journal";
                 default: return "Accueil";
