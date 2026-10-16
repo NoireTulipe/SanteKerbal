@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace SanteKerbal
@@ -39,13 +40,24 @@ namespace SanteKerbal
         /// <summary>Assistant de mise en orbite : altitude visée, démarrage, circularisation, annulation.</summary>
         private void DrawAssistant(Vessel v)
         {
+            GUILayout.BeginHorizontal();
             GUILayout.Label("<b>Assistant de mise en orbite</b>", sectionStyle);
-            if (Navigator.Current != Navigator.Phase.Off)
+            GUILayout.FlexibleSpace();
+            bool panel = GUILayout.Toggle(DisplayPrefs.NavPanel, " Panneau à l'écran", GUILayout.Width(U(170)));
+            if (panel != DisplayPrefs.NavPanel)
+                DisplayPrefs.SetNavPanel(panel);
+            GUILayout.EndHorizontal();
+
+            bool running = Navigator.Current != Navigator.Phase.Off;
+            bool justDone = !running && Navigator.Succeeded && Time.time - Navigator.FinishedAt < 30f;
+            if (running || justDone)
             {
-                GUILayout.Label($"<color=#9fd0ff>{Navigator.Status}</color>", richLabel);
-                if (GUILayout.Button("Annuler l'assistant", smallButton, GUILayout.Width(U(200))))
+                DrawSteps(v);
+                if (running && GUILayout.Button("Annuler l'assistant", smallButton, GUILayout.Width(U(200))))
                     Navigator.Cancel();
-                return;
+                if (running)
+                    return;
+                GUILayout.Space(U(6));
             }
 
             if (Navigator.TargetAltitude <= 0)
@@ -80,6 +92,37 @@ namespace SanteKerbal
             if (!string.IsNullOrEmpty(Navigator.Status))
                 GUILayout.Label($"<color=#a0a0a0>{Navigator.Status}</color>", richLabel);
             GUILayout.Label("<color=#a0a0a0>L'assistant oriente et gère les gaz ; à toi de séparer les étages.</color>", richLabel);
+        }
+
+        /// <summary>Étapes cochées au fur et à mesure, barre de l'étape en cours, chiffres utiles.</summary>
+        private void DrawSteps(Vessel v)
+        {
+            int current = Navigator.Step;
+            for (int i = 0; i < Navigator.StepNames.Length; i++)
+            {
+                string mark, color;
+                if (i < current || (i == current && Navigator.Succeeded)) { mark = "[OK]"; color = "#7fe08a"; }
+                else if (i == current) { mark = "[>>]"; color = "#9fd0ff"; }
+                else { mark = "[  ]"; color = "#707070"; }
+                string name = i == current && !Navigator.Succeeded ? $"<b>{Navigator.StepNames[i]}</b>" : Navigator.StepNames[i];
+                GUILayout.Label($"<color={color}>{mark}  {name}</color>", richLabel);
+            }
+            Rect bar = GUILayoutUtility.GetRect(U(100), U(14), GUILayout.ExpandWidth(true), GUILayout.Height(U(14)));
+            DrawBar(bar, Navigator.Progress, Navigator.Succeeded ? new Color(0.3f, 0.85f, 0.4f) : new Color(0.3f, 0.6f, 1f));
+            GUILayout.Label($"<color=#9fd0ff>{Navigator.Detail}</color>", richLabel);
+
+            Orbit o = v.orbit;
+            string sas = v.ActionGroups[KSPActionGroup.SAS] && v.Autopilot != null ? SasLabel(v.Autopilot.Mode) : "coupé";
+            float throttle = FlightInputHandler.state != null ? FlightInputHandler.state.mainThrottle : 0f;
+            GUILayout.Label($"<color=#a0a0a0>Temps avant l'apoapside {KSPUtil.PrintTimeCompact(Math.Max(0, o.timeToAp), false)}   " +
+                            $"Gaz {throttle * 100:F0} %   SAS : {sas}</color>", richLabel);
+        }
+
+        private static string SasLabel(VesselAutopilot.AutopilotMode mode)
+        {
+            foreach (var (m, label) in SasModes)
+                if (m == mode) return label;
+            return mode.ToString();
         }
 
         private void DrawThrottle()

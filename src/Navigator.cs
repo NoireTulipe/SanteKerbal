@@ -20,6 +20,23 @@ namespace SanteKerbal
         public static string Status { get; private set; } = "";
         public static double TargetAltitude = -1;    // m ; -1 = valeur proposée selon le corps céleste
 
+        // Suivi de l'opération pour la tablette et le panneau lumineux
+        public static readonly string[] StepNames =
+            { "Montée droite", "Basculement vers l'est", "Virage gravitationnel", "Croisière hors atmosphère", "Circularisation", "Orbite atteinte" };
+        public static int Step { get; private set; }
+        public static float Progress { get; private set; }       // avancement de l'étape en cours (0 à 1)
+        public static string Detail { get; private set; } = "";  // ligne de détail (chiffres de l'étape)
+        public static bool Succeeded { get; private set; }
+        public static float FinishedAt { get; private set; } = -100f;   // Time.time de la fin (réussite ou annulation)
+        private static double initialDv;
+
+        private static void Track(int step, double progress, string detail)
+        {
+            Step = step;
+            Progress = Mathf.Clamp01((float)progress);
+            Detail = detail;
+        }
+
         private static Guid vesselId;
 
         // Étapes de la montée : droite, basculement, virage naturel
@@ -43,6 +60,8 @@ namespace SanteKerbal
             vesselId = v.id;
             Current = Phase.Ascent;
             climb = Climb.Vertical;
+            Succeeded = false;
+            Track(0, 0, "");
             SetThrottle(1f);   // pleins gaz : la fusée part à pleine puissance dès l'allumage
             Log.Info($"Navigation : assistant de mise en orbite démarré, orbite visée {TargetAltitude / 1000:F0} km");
         }
@@ -53,6 +72,8 @@ namespace SanteKerbal
             Current = Phase.Circularize;
             node = null;
             warpedToNode = false;
+            Succeeded = false;
+            Track(4, 0, "Préparation du nœud de manœuvre");
         }
 
         public static void Cancel(string why = "Annulé")
@@ -61,6 +82,7 @@ namespace SanteKerbal
                 return;
             Current = Phase.Off;
             Status = why;
+            FinishedAt = Time.time;
             SetThrottle(0);
             RemoveNode();
             Vessel v = FlightGlobals.ActiveVessel;
@@ -117,6 +139,7 @@ namespace SanteKerbal
                 case Climb.Vertical:
                     // Droite comme sur le pas de tir, jusqu'à avoir un peu de vitesse
                     NativeMode(v, VesselAutopilot.AutopilotMode.StabilityAssist);
+                    Track(0, v.srfSpeed / Settings.NavKickSpeed, $"Vitesse {v.srfSpeed:F0} / {Settings.NavKickSpeed:F0} m/s, altitude {v.altitude:F0} m");
                     if (v.srfSpeed >= Settings.NavKickSpeed && v.altitude > 200)
                     {
                         climb = Climb.Kick;
@@ -133,6 +156,7 @@ namespace SanteKerbal
                     PointTo(v, East(v, 90f - (float)Settings.NavKickAngle));
                     float pathTilt = Vector3.Angle((Vector3)v.srf_velocity.normalized, (Vector3)up);
                     Status = $"Basculement vers l'est : nez {tilt:F0}°, trajectoire {pathTilt:F0} / {Settings.NavKickAngle:F0}°";
+                    Track(1, pathTilt / (Settings.NavKickAngle * 0.75), $"Nez penché de {tilt:F0}°, trajectoire {pathTilt:F0}° (cap à l'est)");
                     if (pathTilt >= Settings.NavKickAngle * 0.75 || Time.time - kickStart > 25f)
                         climb = Climb.Turn;
                     break;
@@ -142,6 +166,7 @@ namespace SanteKerbal
                     if (!NativeMode(v, VesselAutopilot.AutopilotMode.Prograde))
                         PointTo(v, v.srf_velocity.normalized);
                     Status = $"Virage : inclinaison {90 - tilt:F0}° au-dessus de l'horizon, apoapside {apo / 1000:F1} / {TargetAltitude / 1000:F0} km";
+                    Track(2, apo / TargetAltitude, $"Inclinaison {90 - tilt:F0}°, apoapside {apo / 1000:F1} / {TargetAltitude / 1000:F0} km");
                     break;
             }
         }
@@ -158,6 +183,7 @@ namespace SanteKerbal
                 // La traînée fait baisser l'apoapside : petits coups de gaz pour la maintenir
                 SetThrottle(v.orbit.ApA < TargetAltitude * 0.995 ? 0.3f : 0f);
                 Status = $"Croisière : sortie de l'atmosphère ({v.altitude / 1000:F1} / {b.atmosphereDepth / 1000:F0} km)";
+                Track(3, v.altitude / b.atmosphereDepth, $"Altitude {v.altitude / 1000:F1} / {b.atmosphereDepth / 1000:F0} km, apoapside {v.orbit.ApA / 1000:F1} km");
                 return;
             }
             SetThrottle(0);
@@ -186,6 +212,7 @@ namespace SanteKerbal
                 RemoveNode();
                 node = v.patchedConicSolver.AddManeuverNode(ut);
                 node.DeltaV = new Vector3d(0, 0, dv);
+                initialDv = Math.Max(1, Math.Abs(dv));
                 v.patchedConicSolver.UpdateFlightPlan();
                 warpedToNode = false;
                 Log.Info($"Navigation : nœud de circularisation dans {o.timeToAp:F0} s, {dv:F1} m/s");
@@ -218,6 +245,9 @@ namespace SanteKerbal
                 RemoveNode();
                 Current = Phase.Off;
                 Status = $"Orbite atteinte : {o.ApA / 1000:F1} x {o.PeA / 1000:F1} km";
+                Succeeded = true;
+                FinishedAt = Time.time;
+                Track(5, 1, $"Apoapside {o.ApA / 1000:F1} km, périapside {o.PeA / 1000:F1} km");
                 HealthEvents.Announce(v, Status);
                 if (v.Autopilot != null)
                     v.Autopilot.SetMode(VesselAutopilot.AutopilotMode.StabilityAssist);
@@ -227,6 +257,7 @@ namespace SanteKerbal
             {
                 SetThrottle(0);
                 Status = "Pas de poussée : allume un moteur ou passe à l'étage suivant";
+                Track(4, 1 - remaining / initialDv, "Pas de poussée : sépare l'étage vide !");
                 return;
             }
 
@@ -242,16 +273,19 @@ namespace SanteKerbal
             {
                 SetThrottle(0);
                 Status = $"Circularisation : allumage dans {KSPUtil.PrintTimeCompact(startIn, false)} ({remaining:F0} m/s, {burnTime:F0} s)";
+                Track(4, 0, $"Allumage dans {KSPUtil.PrintTimeCompact(startIn, false)} : {remaining:F0} m/s à gagner en {burnTime:F0} s ({how})");
                 return;
             }
             if (error > 5 && v.ctrlState.mainThrottle < 0.01f)
             {
                 Status = $"Circularisation : orientation en cours ({error:F0}°, {how})";
+                Track(4, 0, $"Orientation vers la manœuvre : encore {error:F0}° ({how})");
                 return;
             }
             // Pleins gaz, puis on ralentit sur la dernière seconde pour ne pas dépasser
             SetThrottle((float)Math.Max(0.05, Math.Min(1.0, remaining / accel)));
             Status = $"Circularisation : poussée, reste {remaining:F1} m/s";
+            Track(4, 1 - remaining / initialDv, $"Poussée : reste {remaining:F1} m/s, périapside {o.PeA / 1000:F1} km");
         }
 
         private static void RemoveNode()

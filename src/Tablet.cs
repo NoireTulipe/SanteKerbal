@@ -61,6 +61,9 @@ namespace SanteKerbal
         private static bool visible;
         private static Page page = Page.Home;
 
+        /// <summary>La tablette est ouverte sur la page Navigation (le panneau lumineux est alors inutile).</summary>
+        public static bool ShowingNavigation => visible && page == Page.Navigation;
+
         private ApplicationLauncherButton button;
         private bool uiHidden;
         private bool locked;

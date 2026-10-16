@@ -18,6 +18,7 @@ namespace SanteKerbal
         public static bool PortraitMonitor = true;
         public static bool MonitorSound = true;
         public static bool PowerGraph = true;
+        public static bool NavPanel = true;   // panneau lumineux de l'assistant de vol (réglé sur la tablette)
 
         private static bool loaded;
         private static Game syncedGame;
@@ -87,12 +88,22 @@ namespace SanteKerbal
                 n.TryGetValue("portraitMonitor", ref PortraitMonitor);
                 n.TryGetValue("monitorSound", ref MonitorSound);
                 n.TryGetValue("powerGraph", ref PowerGraph);
+                n.TryGetValue("navPanel", ref NavPanel);
                 Log.Info("Préférences d'affichage lues : " + Snapshot());
             }
             catch (Exception e)
             {
                 Log.Warning("Préférences d'affichage illisibles, valeurs par défaut : " + e.Message);
             }
+        }
+
+        public static void SetNavPanel(bool on)
+        {
+            Load();
+            if (NavPanel == on)
+                return;
+            NavPanel = on;
+            Save();
         }
 
         private static void Save()
@@ -107,6 +118,7 @@ namespace SanteKerbal
                 n.AddValue("portraitMonitor", PortraitMonitor);
                 n.AddValue("monitorSound", MonitorSound);
                 n.AddValue("powerGraph", PowerGraph);
+                n.AddValue("navPanel", NavPanel);
                 n.Save(PrefsPath);
                 Log.Info("Préférences d'affichage enregistrées : " + Snapshot());
             }
